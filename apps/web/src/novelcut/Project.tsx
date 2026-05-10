@@ -23,12 +23,21 @@ export function Project({ projectId, tab }: { projectId: string; tab: string }) 
   const [project, setProject] = useState<ProjectT | undefined>(() => getProject(projectId));
   const [showWelcome, setShowWelcome] = useState(false);
 
+  // First-time auto-show
   useEffect(() => {
     setProject(getProject(projectId));
     if (typeof window !== "undefined" && !hasSeenWelcome()) {
       setShowWelcome(true);
     }
   }, [projectId]);
+
+  // Re-open via 🧭 button in top bar
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onShow = () => setShowWelcome(true);
+    window.addEventListener("novelcut:show-tour", onShow);
+    return () => window.removeEventListener("novelcut:show-tour", onShow);
+  }, []);
 
   if (!project) {
     return (

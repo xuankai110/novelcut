@@ -24,6 +24,12 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
   const cfg = typeof window !== "undefined" ? loadLLMConfig() : null;
   const configured = !!cfg?.apiKey;
 
+  const showTour = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("novelcut:show-tour"));
+    }
+  };
+
   return (
     <div className="nc-app">
       <header className="nc-topbar">
@@ -48,6 +54,12 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
         <div className="nc-topbar-spacer" />
 
         <div className="nc-topbar-actions">
+          {route.kind === "project" && (
+            <button className="nc-btn" onClick={showTour} title="重新查看 6 步制作指引">
+              <span style={{ fontSize: 13 }}>🧭</span>
+              <span>指引</span>
+            </button>
+          )}
           <button
             className="nc-btn"
             onClick={() => setShowSettings(true)}
