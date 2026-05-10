@@ -103,7 +103,7 @@ export function AssetsTab({ project }: { project: Project }) {
     const updating: Asset = { ...asset, imageStatus: "running", imageError: undefined };
     upsertAndState(updating);
     try {
-      const r = await runAssetImage(img!, asset, { signal: ac.signal });
+      const r = await runAssetImage(img!, project, asset, { signal: ac.signal });
       const url = r.url ?? (r.b64 ? `data:image/png;base64,${r.b64}` : undefined);
       const done: Asset = { ...updating, previewUrl: url, imageStatus: "done" };
       upsertAndState(done);
@@ -204,7 +204,10 @@ export function AssetsTab({ project }: { project: Project }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 className="nc-page-title" style={{ fontSize: 20 }}>资产中心</h2>
-          <div className="nc-page-sub">全局复用 · 任何剧本/分镜都关联同一份角色/道具/场景。出图后自动跨集保持一致性。</div>
+          <div className="nc-page-sub" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span>全局复用 · 所有资产/分镜/视频共用项目画幅。</span>
+            <ProjectImagingBadge project={project} onChange={(p) => { /* re-renders via parent state */ window.location.reload(); }} />
+          </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="nc-btn nc-btn-ghost" onClick={onSmartImport}>
@@ -372,6 +375,72 @@ export function AssetsTab({ project }: { project: Project }) {
 
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} initialTab="image" />}
     </>
+  );
+}
+
+
+function ProjectImagingBadge({ project, onChange }: { project: Project; onChange: (p: Project) => void }) {
+  const [editing, setEditing] = useState(false);
+  const ratio = project.videoRatio ?? (
+    ["抖音","小红书","快手","TikTok","YouTube Shorts"].includes(project.platform) ? "9:16" : "16:9"
+  );
+  const quality = project.imageQuality ?? "1K";
+  return (
+    <>
+      <button
+        className="nc-pill"
+        onClick={() => setEditing(true)}
+        style={{
+          background: "var(--nc-cyan-tint)", color: "var(--nc-cyan-strong)",
+          border: "1px solid var(--nc-cyan-soft)", cursor: "pointer", padding: "2px 10px",
+        }}
+        title="点击修改项目画幅 / 画质"
+      >
+        🎞 {ratio} · {quality}
+      </button>
+      {editing && <ProjectImagingDialog project={project} onClose={() => setEditing(false)} onSave={onChange} />}
+    </>
+  );
+}
+
+function ProjectImagingDialog({ project, onClose, onSave }: { project: Project; onClose: () => void; onSave: (p: Project) => void }) {
+  const { upsertProject } = require("../store") as typeof import("../store");
+  const { RATIO_OPTIONS, QUALITY_OPTIONS } = require("../projectMeta") as typeof import("../projectMeta");
+  const [ratio, setRatio] = useState(project.videoRatio ?? "9:16");
+  const [quality, setQuality] = useState(project.imageQuality ?? "1K");
+  return (
+    <div className="nc-modal-backdrop" onClick={onClose}>
+      <div className="nc-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="nc-modal-head">
+          <div>
+            <div className="nc-modal-title">项目画幅 / 画质</div>
+            <div className="nc-page-sub">所有资产、分镜、视频共用 · 修改后已生成的资产不会自动重新出图</div>
+          </div>
+          <button className="nc-modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="nc-form-row">
+          <label className="nc-label">画幅</label>
+          <select className="nc-select" value={ratio} onChange={(e) => setRatio(e.target.value as any)}>
+            {RATIO_OPTIONS.map((o: any) => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
+          </select>
+        </div>
+        <div className="nc-form-row">
+          <label className="nc-label">画质</label>
+          <select className="nc-select" value={quality} onChange={(e) => setQuality(e.target.value as any)}>
+            {QUALITY_OPTIONS.map((o: any) => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
+          </select>
+        </div>
+        <div className="nc-modal-foot">
+          <button className="nc-btn nc-btn-ghost" onClick={onClose}>取消</button>
+          <button className="nc-btn nc-btn-primary" onClick={() => {
+            const next = { ...project, videoRatio: ratio, imageQuality: quality, updatedAt: Date.now() };
+            upsertProject(next);
+            onSave(next);
+            onClose();
+          }}>保存</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -181,25 +181,25 @@ export async function runAssetPrompt(
 }
 
 export interface RunAssetImageOptions {
-  /** override aspect/size for this call. default by asset kind. */
+  /** override aspect/size for this call (advanced — usually let project decide). */
   size?: string;
   aspectRatio?: string;
   signal?: AbortSignal;
 }
 
 export async function runAssetImage(
-  img: ImageConfig, asset: Asset, opts: RunAssetImageOptions = {},
+  img: ImageConfig, project: Project, asset: Asset, opts: RunAssetImageOptions = {},
 ): Promise<{ url?: string; b64?: string }> {
   if (!asset.prompt) throw new Error("资产缺少 prompt — 请先生成提示词");
-  // Default sizing per kind (vertical for scenes, square for char/prop/media)
+  const { getVideoRatio, getImageQuality, ratioToPixelSize } = await import("../projectMeta");
+  const ratio = getVideoRatio(project);
+  const quality = getImageQuality(project);
   const useAR = img.useAspectRatio;
-  const defaultSize = useAR
-    ? (asset.kind === "scene" ? "9:16" : "1:1")
-    : (asset.kind === "scene" ? "1024x1792" : "1024x1024");
+  // Toonflow-aligned: every asset follows project ratio (no per-kind override)
   const result = await imageGenerate(img, {
     prompt: asset.prompt,
-    size: useAR ? undefined : (opts.size ?? img.defaultSize ?? defaultSize),
-    aspectRatio: useAR ? (opts.aspectRatio ?? img.defaultSize ?? defaultSize) : undefined,
+    size: useAR ? undefined : (opts.size ?? ratioToPixelSize(ratio, quality)),
+    aspectRatio: useAR ? (opts.aspectRatio ?? ratio) : undefined,
     signal: opts.signal,
   });
   return { url: result.url, b64: result.b64 };

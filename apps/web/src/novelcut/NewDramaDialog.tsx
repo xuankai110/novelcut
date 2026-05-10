@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { genId, upsertProject } from "./store";
-import type { Genre, Platform, Project, Tone } from "./types";
+import type { Genre, ImageQuality, Platform, Project, Tone, VideoRatio } from "./types";
+import { defaultRatioForPlatform, RATIO_OPTIONS, QUALITY_OPTIONS } from "./projectMeta";
 
 const GENRES: Genre[] = [
   "现代都市", "古装宫斗", "玄幻仙侠", "霸总言情",
@@ -30,6 +31,13 @@ export function NewDramaDialog({
   const [tone, setTone] = useState<Tone>("压迫感强");
   const [episodeCount, setEpisodeCount] = useState(60);
   const [synopsis, setSynopsis] = useState("");
+  const [videoRatio, setVideoRatio] = useState<VideoRatio>("9:16");
+  const [imageQuality, setImageQuality] = useState<ImageQuality>("1K");
+  const [ratioTouched, setRatioTouched] = useState(false);
+  // Auto-derive ratio when platform changes — until user manually picks one
+  useEffect(() => {
+    if (!ratioTouched) setVideoRatio(defaultRatioForPlatform(platform));
+  }, [platform, ratioTouched]);
 
   const submit = () => {
     if (!name.trim()) {
@@ -46,6 +54,8 @@ export function NewDramaDialog({
       tone,
       episodeCount,
       synopsis: synopsis.trim() || undefined,
+      videoRatio,
+      imageQuality,
       createdAt: now,
       updatedAt: now,
     };
@@ -101,6 +111,32 @@ export function NewDramaDialog({
             <label className="nc-label">风格基调</label>
             <select className="nc-select" value={tone} onChange={(e) => setTone(e.target.value as Tone)}>
               {TONES.map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="nc-form-grid">
+          <div className="nc-form-row">
+            <label className="nc-label">画幅 (videoRatio)</label>
+            <select
+              className="nc-select"
+              value={videoRatio}
+              onChange={(e) => { setRatioTouched(true); setVideoRatio(e.target.value as VideoRatio); }}
+            >
+              {RATIO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
+            </select>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+              所有资产/分镜/视频共用此画幅 · 默认按平台自动选
+            </div>
+          </div>
+          <div className="nc-form-row">
+            <label className="nc-label">出图画质</label>
+            <select
+              className="nc-select"
+              value={imageQuality}
+              onChange={(e) => setImageQuality(e.target.value as ImageQuality)}
+            >
+              {QUALITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
             </select>
           </div>
         </div>

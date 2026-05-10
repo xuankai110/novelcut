@@ -221,23 +221,15 @@ function ImageSection({ onClose }: { onClose: () => void }) {
         </div>
       </div>
       <div className="nc-form-row">
-        <label className="nc-label">默认尺寸</label>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input
-            className="nc-input"
-            value={defaultSize}
-            onChange={(e) => setDefaultSize(e.target.value)}
-            placeholder={useAspectRatio ? "1:1 (用作 aspectRatio)" : "1024x1024 (用作 size)"}
-            spellCheck={false}
-            style={{ maxWidth: 220 }}
-          />
-          <label style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
-            <input type="checkbox" checked={useAspectRatio} onChange={(e) => setUseAspectRatio(e.target.checked)} />
-            使用 aspectRatio (grsai/可灵)
-          </label>
-        </div>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-          OpenAI 标准用 size (如 1024x1024、1024x1792);grsai/可灵 用 aspectRatio (1:1、9:16)。
+        <label style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={useAspectRatio} onChange={(e) => setUseAspectRatio(e.target.checked)} />
+          使用 aspectRatio 协议 (grsai / 可灵)
+        </label>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
+          OpenAI 标准用 <code>size</code> (1024x1536 等),grsai/可灵 用 <code>aspectRatio</code> (9:16 等)。
+          <br />
+          <strong>具体画幅由项目设置 (videoRatio + imageQuality) 决定,不在这里配。</strong>
+          每个项目可以有不同的画幅 (短剧 9:16 / 横版 16:9 / 海报 3:4)。
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4 }}>

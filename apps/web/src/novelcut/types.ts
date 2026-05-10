@@ -6,9 +6,18 @@ export type Genre =
 export type Platform = "抖音" | "小红书" | "快手" | "TikTok" | "YouTube Shorts";
 export type Tone = "压迫感强" | "甜宠治愈" | "热血爽感" | "悬疑紧张" | "诙谐轻喜";
 
+export type VideoRatio = "9:16" | "16:9" | "1:1" | "3:4" | "4:3";
+export type ImageQuality = "1K" | "2K" | "4K";
+
 export interface Project {
   id: string; name: string; genre: Genre; language: string;
   platform: Platform; tone: Tone; episodeCount: number; synopsis?: string;
+  /** picture/video aspect ratio shared across all assets, storyboard, final video.
+   *  default derived from platform (vertical platforms => 9:16). */
+  videoRatio?: VideoRatio;
+  /** image generation quality tier, passed to provider as `1K`/`2K`/`4K` or
+   *  mapped to pixel size for OpenAI-style providers. default 1K. */
+  imageQuality?: ImageQuality;
   createdAt: number; updatedAt: number;
 }
 
