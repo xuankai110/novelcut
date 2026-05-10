@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { promisify } from "node:util";
 
 import { rebuild } from "@electron/rebuild";
-import { createCommandInvocation, createPackageManagerInvocation } from "@open-design/platform";
+import { createCommandInvocation, createPackageManagerInvocation } from "@novelcut/platform";
 
 import { hashJson, hashPath, ToolPackCache } from "../cache.js";
 import type { ToolPackConfig } from "../config.js";
@@ -94,20 +94,20 @@ async function buildWorkspaceArtifacts(config: ToolPackConfig): Promise<void> {
   const webNextEnvPath = join(config.workspaceRoot, "apps", "web", "next-env.d.ts");
   const previousWebNextEnv = await readFile(webNextEnvPath, "utf8").catch(() => null);
 
-  await runPnpm(config, ["--filter", "@open-design/contracts", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/sidecar-proto", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/sidecar", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/platform", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/daemon", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/contracts", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/sidecar-proto", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/sidecar", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/platform", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/daemon", "build"]);
   try {
-    await runPnpm(config, ["--filter", "@open-design/web", "build"], { OD_WEB_OUTPUT_MODE: config.webOutputMode });
-    await runPnpm(config, ["--filter", "@open-design/web", "build:sidecar"]);
+    await runPnpm(config, ["--filter", "@novelcut/web", "build"], { OD_WEB_OUTPUT_MODE: config.webOutputMode });
+    await runPnpm(config, ["--filter", "@novelcut/web", "build:sidecar"]);
   } finally {
     if (previousWebNextEnv == null) await rm(webNextEnvPath, { force: true });
     else await writeFile(webNextEnvPath, previousWebNextEnv, "utf8");
   }
-  await runPnpm(config, ["--filter", "@open-design/desktop", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/packaged", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/desktop", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/packaged", "build"]);
 }
 
 export async function ensureWinWorkspaceBuild(config: ToolPackConfig, cache: ToolPackCache): Promise<void> {
@@ -209,7 +209,7 @@ async function writeAssembledAppEntrypoints(
   );
   await writeFile(
     paths.assembledMainEntryPath,
-    'import("@open-design/packaged").catch((error) => {\n  console.error("packaged entry failed", error);\n  process.exit(1);\n});\n',
+    'import("@novelcut/packaged").catch((error) => {\n  console.error("packaged entry failed", error);\n  process.exit(1);\n});\n',
     "utf8",
   );
 }

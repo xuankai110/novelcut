@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch, SetStateAction } from 'react';
-import { validateBaseUrl } from '@open-design/contracts/api/connectionTest';
+import { validateBaseUrl } from '@novelcut/contracts/api/connectionTest';
 import { LOCALE_LABEL, LOCALES, useI18n } from '../i18n';
 import type { Locale } from '../i18n';
 import type { Dict } from '../i18n/types';

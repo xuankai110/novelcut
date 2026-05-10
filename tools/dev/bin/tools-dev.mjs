@@ -11,7 +11,7 @@ const missingDistEntries = requiredDistEntries.filter((entry) => !existsSync(ent
 
 if (missingDistEntries.length > 0) {
   throw new Error(
-    `tools-dev dist entries not found: ${missingDistEntries.join(', ')}. Run "pnpm --filter @open-design/tools-dev build" first.`,
+    `tools-dev dist entries not found: ${missingDistEntries.join(', ')}. Run "pnpm --filter @novelcut/tools-dev build" first.`,
   );
 }
 

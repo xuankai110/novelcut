@@ -61,7 +61,7 @@ import type {
   InstallDesignSystemResponse,
   UninstallResponse,
   UpdateDeployConfigRequest,
-} from '@open-design/contracts';
+} from '@novelcut/contracts';
 
 export type {
   CloudflarePagesDeploySelection,
@@ -71,7 +71,7 @@ export type {
   OrbitStatusResponse,
   PreviewCommentMember,
   PreviewCommentSelectionKind,
-} from '@open-design/contracts';
+} from '@novelcut/contracts';
 
 export type ExecMode = 'daemon' | 'api';
 export type ApiProtocol = 'anthropic' | 'openai' | 'azure' | 'google' | 'ollama';

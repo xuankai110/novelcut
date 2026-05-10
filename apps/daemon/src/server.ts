@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { DesktopExportPdfInput, DesktopExportPdfResult } from '@open-design/sidecar-proto';
+import type { DesktopExportPdfInput, DesktopExportPdfResult } from '@novelcut/sidecar-proto';
 import express from 'express';
 import multer from 'multer';
 import { execFile, spawn } from 'node:child_process';
@@ -16,8 +16,8 @@ import {
   shouldRenderCodexImagegenOverride,
 } from './prompts/system.js';
 import { expandHomePrefix, resolveProjectRelativePath } from './home-expansion.js';
-import { createCommandInvocation } from '@open-design/platform';
-import { SIDECAR_DEFAULTS, SIDECAR_ENV } from '@open-design/sidecar-proto';
+import { createCommandInvocation } from '@novelcut/platform';
+import { SIDECAR_DEFAULTS, SIDECAR_ENV } from '@novelcut/sidecar-proto';
 import {
   buildLiveArtifactsMcpServersForAgent,
   checkPromptArgvBudget,
@@ -232,13 +232,13 @@ import {
   isLocalSameOrigin,
 } from './origin-validation.js';
 
-/** @typedef {import('@open-design/contracts').ApiErrorCode} ApiErrorCode */
-/** @typedef {import('@open-design/contracts').ApiError} ApiError */
-/** @typedef {import('@open-design/contracts').ApiErrorResponse} ApiErrorResponse */
-/** @typedef {import('@open-design/contracts').ChatRequest} ChatRequest */
-/** @typedef {import('@open-design/contracts').ChatSseEvent} ChatSseEvent */
-/** @typedef {import('@open-design/contracts').ProxyStreamRequest} ProxyStreamRequest */
-/** @typedef {import('@open-design/contracts').ProxySseEvent} ProxySseEvent */
+/** @typedef {import('@novelcut/contracts').ApiErrorCode} ApiErrorCode */
+/** @typedef {import('@novelcut/contracts').ApiError} ApiError */
+/** @typedef {import('@novelcut/contracts').ApiErrorResponse} ApiErrorResponse */
+/** @typedef {import('@novelcut/contracts').ChatRequest} ChatRequest */
+/** @typedef {import('@novelcut/contracts').ChatSseEvent} ChatSseEvent */
+/** @typedef {import('@novelcut/contracts').ProxyStreamRequest} ProxyStreamRequest */
+/** @typedef {import('@novelcut/contracts').ProxySseEvent} ProxySseEvent */
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -261,7 +261,7 @@ export function resolveDaemonCliPath(env: NodeJS.ProcessEnv = process.env): stri
   const configured = cleanOptionalPath(env[DAEMON_CLI_PATH_ENV]) ?? cleanOptionalPath(env.OD_BIN);
   if (configured) return configured;
 
-  const packageJsonPath = require.resolve('@open-design/daemon/package.json');
+  const packageJsonPath = require.resolve('@novelcut/daemon/package.json');
   return path.join(path.dirname(packageJsonPath), 'dist', 'cli.js');
 }
 
@@ -2639,7 +2639,7 @@ export async function startServer({
           }
         }
       }
-      /** @type {import('@open-design/contracts').ProjectsResponse} */
+      /** @type {import('@novelcut/contracts').ProjectsResponse} */
       const body = {
         projects: listProjects(db).map((project) => ({
           ...project,
@@ -2769,7 +2769,7 @@ export async function startServer({
           }
         }
       }
-      /** @type {import('@open-design/contracts').CreateProjectResponse} */
+      /** @type {import('@novelcut/contracts').CreateProjectResponse} */
       const body = { project, conversationId: cid };
       res.json(body);
     } catch (err) {
@@ -3005,7 +3005,7 @@ export async function startServer({
         updatedAt: now,
       });
       if (entryFile) setTabs(db, id, [entryFile], entryFile);
-      /** @type {import('@open-design/contracts').ImportFolderResponse} */
+      /** @type {import('@novelcut/contracts').ImportFolderResponse} */
       const body = { project, conversationId: cid, entryFile };
       res.json(body);
     } catch (err) {
@@ -3018,7 +3018,7 @@ export async function startServer({
     if (!project)
       return sendApiError(res, 404, 'PROJECT_NOT_FOUND', 'not found');
     const resolvedDir = resolveProjectDir(PROJECTS_DIR, project.id, project.metadata);
-    /** @type {import('@open-design/contracts').ProjectDetailResponse} */
+    /** @type {import('@novelcut/contracts').ProjectDetailResponse} */
     const body = { project, resolvedDir };
     res.json(body);
   });
@@ -3095,7 +3095,7 @@ export async function startServer({
       const project = updateProject(db, req.params.id, patch);
       if (!project)
         return sendApiError(res, 404, 'PROJECT_NOT_FOUND', 'not found');
-      /** @type {import('@open-design/contracts').ProjectResponse} */
+      /** @type {import('@novelcut/contracts').ProjectResponse} */
       const body = { project };
       res.json(body);
     } catch (err) {
@@ -3107,7 +3107,7 @@ export async function startServer({
     try {
       dbDeleteProject(db, req.params.id);
       await removeProjectDir(PROJECTS_DIR, req.params.id).catch(() => {});
-      /** @type {import('@open-design/contracts').OkResponse} */
+      /** @type {import('@novelcut/contracts').OkResponse} */
       const body = { ok: true };
       res.json(body);
     } catch (err) {
@@ -4240,7 +4240,7 @@ export async function startServer({
       if (!isDeployProviderId(providerId)) {
         return sendApiError(res, 400, 'BAD_REQUEST', 'unsupported deploy provider');
       }
-      /** @type {import('@open-design/contracts').DeployConfigResponse} */
+      /** @type {import('@novelcut/contracts').DeployConfigResponse} */
       const body = publicDeployConfigForProvider(providerId, await readDeployConfig(providerId));
       res.json(body);
     } catch (err) {
@@ -4256,7 +4256,7 @@ export async function startServer({
       if (!isDeployProviderId(providerId)) {
         return sendApiError(res, 400, 'BAD_REQUEST', 'unsupported deploy provider');
       }
-      /** @type {import('@open-design/contracts').DeployConfigResponse} */
+      /** @type {import('@novelcut/contracts').DeployConfigResponse} */
       const body = await writeDeployConfig(providerId, input);
       res.json(body);
     } catch (err) {
@@ -4266,7 +4266,7 @@ export async function startServer({
 
   app.get('/api/deploy/cloudflare-pages/zones', async (_req, res) => {
     try {
-      /** @type {import('@open-design/contracts').CloudflarePagesZonesResponse} */
+      /** @type {import('@novelcut/contracts').CloudflarePagesZonesResponse} */
       const body = await listCloudflarePagesZones(await readDeployConfig(CLOUDFLARE_PAGES_PROVIDER_ID));
       res.json(body);
     } catch (err) {
@@ -4281,7 +4281,7 @@ export async function startServer({
 
   app.get('/api/projects/:id/deployments', (req, res) => {
     try {
-      /** @type {import('@open-design/contracts').ProjectDeploymentsResponse} */
+      /** @type {import('@novelcut/contracts').ProjectDeploymentsResponse} */
       const body = { deployments: publicDeployments(listDeployments(db, req.params.id)) };
       res.json(body);
     } catch (err) {
@@ -4334,7 +4334,7 @@ export async function startServer({
             projectId: req.params.id,
           });
       const now = Date.now();
-      /** @type {import('@open-design/contracts').DeployProjectFileResponse} */
+      /** @type {import('@novelcut/contracts').DeployProjectFileResponse} */
       const body = upsertDeployment(db, {
         id: prior?.id ?? randomUUID(),
         projectId: req.params.id,
@@ -4387,7 +4387,7 @@ export async function startServer({
         return sendApiError(res, 400, 'BAD_REQUEST', 'fileName required');
       }
       const preflightProject = getProject(db, req.params.id);
-      /** @type {import('@open-design/contracts').DeployPreflightResponse} */
+      /** @type {import('@novelcut/contracts').DeployPreflightResponse} */
       const body = await prepareDeployPreflight(
         PROJECTS_DIR,
         req.params.id,
@@ -4569,7 +4569,7 @@ export async function startServer({
         if (existing.providerId === CLOUDFLARE_PAGES_PROVIDER_ID && existing.cloudflarePages?.pagesDev?.url) {
           const checked = await checkCloudflarePagesDeploymentLinks(existing);
           const now = Date.now();
-          /** @type {import('@open-design/contracts').CheckDeploymentLinkResponse} */
+          /** @type {import('@novelcut/contracts').CheckDeploymentLinkResponse} */
           const body = upsertDeployment(db, {
             ...existing,
             ...checked,
@@ -4583,7 +4583,7 @@ export async function startServer({
           : existing.url;
         const result = await checkDeploymentUrl(checkUrl);
         const now = Date.now();
-        /** @type {import('@open-design/contracts').CheckDeploymentLinkResponse} */
+        /** @type {import('@novelcut/contracts').CheckDeploymentLinkResponse} */
         const body = upsertDeployment(db, {
           ...existing,
           url: checkUrl || existing.url,
@@ -4620,7 +4620,7 @@ export async function startServer({
         since: Number.isFinite(since) ? since : undefined,
         metadata: project?.metadata,
       });
-      /** @type {import('@open-design/contracts').ProjectFilesResponse} */
+      /** @type {import('@novelcut/contracts').ProjectFilesResponse} */
       const body = { files };
       res.json(body);
     } catch (err) {
@@ -4859,7 +4859,7 @@ export async function startServer({
     try {
       const project = getProject(db, req.params.id);
       await deleteProjectFile(PROJECTS_DIR, req.params.id, req.params[0], project?.metadata);
-      /** @type {import('@open-design/contracts').DeleteProjectFileResponse} */
+      /** @type {import('@novelcut/contracts').DeleteProjectFileResponse} */
       const body = { ok: true };
       res.json(body);
     } catch (err) {
@@ -5007,7 +5007,7 @@ export async function startServer({
             uploadProject?.metadata,
           );
           fs.promises.unlink(req.file.path).catch(() => {});
-          /** @type {import('@open-design/contracts').ProjectFileResponse} */
+          /** @type {import('@novelcut/contracts').ProjectFileResponse} */
           const body = { file: meta };
           return res.json(body);
         }
@@ -5046,7 +5046,7 @@ export async function startServer({
           { artifactManifest },
           uploadProject?.metadata,
         );
-        /** @type {import('@open-design/contracts').ProjectFileResponse} */
+        /** @type {import('@novelcut/contracts').ProjectFileResponse} */
         const body = { file: meta };
         res.json(body);
       } catch (err) {
@@ -5069,7 +5069,7 @@ export async function startServer({
         to,
         project?.metadata,
       );
-      /** @type {import('@open-design/contracts').RenameProjectFileResponse} */
+      /** @type {import('@novelcut/contracts').RenameProjectFileResponse} */
       const body = result;
       res.json(body);
     } catch (err) {
@@ -5088,7 +5088,7 @@ export async function startServer({
     try {
       const delProject = getProject(db, req.params.id);
       await deleteProjectFile(PROJECTS_DIR, req.params.id, req.params.name, delProject?.metadata);
-      /** @type {import('@open-design/contracts').DeleteProjectFileResponse} */
+      /** @type {import('@novelcut/contracts').DeleteProjectFileResponse} */
       const body = { ok: true };
       res.json(body);
     } catch (err) {
@@ -5773,7 +5773,7 @@ export async function startServer({
             // skip files that vanished mid-flight
           }
         }
-        /** @type {import('@open-design/contracts').UploadProjectFilesResponse} */
+        /** @type {import('@novelcut/contracts').UploadProjectFilesResponse} */
         const body = { files: out };
         res.json(body);
       } catch (err) {
@@ -7109,7 +7109,7 @@ export async function startServer({
       const ua = String(req.get('user-agent') ?? '');
       run.clientType = ua.includes('Electron/') ? 'desktop' : 'web';
     }
-    /** @type {import('@open-design/contracts').ChatRunCreateResponse} */
+    /** @type {import('@novelcut/contracts').ChatRunCreateResponse} */
     const body = { runId: run.id };
     res.status(202).json(body);
     design.runs.start(run, () => startChatRun(req.body || {}, run));
@@ -7118,7 +7118,7 @@ export async function startServer({
   app.get('/api/runs', (req, res) => {
     const { projectId, conversationId, status } = req.query;
     const runs = design.runs.list({ projectId, conversationId, status });
-    /** @type {import('@open-design/contracts').ChatRunListResponse} */
+    /** @type {import('@novelcut/contracts').ChatRunListResponse} */
     const body = { runs: runs.map(design.runs.statusBody) };
     res.json(body);
   });
@@ -7139,7 +7139,7 @@ export async function startServer({
     const run = design.runs.get(req.params.id);
     if (!run) return sendApiError(res, 404, 'NOT_FOUND', 'run not found');
     design.runs.cancel(run);
-    /** @type {import('@open-design/contracts').ChatRunCancelResponse} */
+    /** @type {import('@novelcut/contracts').ChatRunCancelResponse} */
     const body = { ok: true };
     res.json(body);
   });

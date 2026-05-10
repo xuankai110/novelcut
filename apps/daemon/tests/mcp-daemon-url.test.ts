@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, test } from "vitest";
-import { createJsonIpcServer, type JsonIpcServerHandle } from "@open-design/sidecar";
-import { SIDECAR_ENV, SIDECAR_MESSAGES } from "@open-design/sidecar-proto";
+import { createJsonIpcServer, type JsonIpcServerHandle } from "@novelcut/sidecar";
+import { SIDECAR_ENV, SIDECAR_MESSAGES } from "@novelcut/sidecar-proto";
 import { resolveMcpDaemonUrl, MCP_DEFAULT_DAEMON_URL } from "../src/mcp-daemon-url.js";
 
 // On Windows the sidecar IPC contract switches to named pipes whose

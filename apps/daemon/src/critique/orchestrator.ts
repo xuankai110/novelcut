@@ -1,8 +1,8 @@
 import type { ChildProcess } from 'node:child_process';
 import type Database from 'better-sqlite3';
-import type { CritiqueConfig, PanelEvent } from '@open-design/contracts/critique';
-import { panelEventToSse } from '@open-design/contracts/critique';
-import type { CritiqueSseEvent } from '@open-design/contracts/critique';
+import type { CritiqueConfig, PanelEvent } from '@novelcut/contracts/critique';
+import { panelEventToSse } from '@novelcut/contracts/critique';
+import type { CritiqueSseEvent } from '@novelcut/contracts/critique';
 import { parseCritiqueStream } from './parser.js';
 import {
   computeComposite,

@@ -1,4 +1,4 @@
-import type { ResearchSource } from '@open-design/contracts/api/research';
+import type { ResearchSource } from '@novelcut/contracts/api/research';
 
 const DEFAULT_BASE_URL = 'https://api.tavily.com';
 const DEFAULT_TIMEOUT_MS = 30_000;

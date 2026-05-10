@@ -7,7 +7,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type SyntheticEvent,
 } from 'react';
-import type { ConnectorConnectResponse, ConnectorDetail, ConnectorStatusResponse } from '@open-design/contracts';
+import type { ConnectorConnectResponse, ConnectorDetail, ConnectorStatusResponse } from '@novelcut/contracts';
 import { useT } from '../i18n';
 import type { Dict } from '../i18n/types';
 import {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ConnectorDetail, ConnectorStatusResponse, ImportFolderResponse } from '@open-design/contracts';
+import type { ConnectorDetail, ConnectorStatusResponse, ImportFolderResponse } from '@novelcut/contracts';
 import { useT } from '../i18n';
 import {
   DEFAULT_AUDIO_MODEL,

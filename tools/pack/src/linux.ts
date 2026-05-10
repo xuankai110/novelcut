@@ -12,8 +12,8 @@ import {
   SIDECAR_SOURCES,
   type DesktopStatusSnapshot,
   type SidecarStamp,
-} from "@open-design/sidecar-proto";
-import { createSidecarLaunchEnv, requestJsonIpc, resolveAppIpcPath } from "@open-design/sidecar";
+} from "@novelcut/sidecar-proto";
+import { createSidecarLaunchEnv, requestJsonIpc, resolveAppIpcPath } from "@novelcut/sidecar";
 import {
   collectProcessTreePids,
   createPackageManagerInvocation,
@@ -22,7 +22,7 @@ import {
   readLogTail,
   spawnBackgroundProcess,
   stopProcesses,
-} from "@open-design/platform";
+} from "@novelcut/platform";
 
 import type { ToolPackConfig } from "./config.js";
 import { copyBundledResourceTrees, linuxResources } from "./resources.js";
@@ -34,14 +34,14 @@ const APP_IMAGE_PRODUCT_NAME = "Open-Design";
 const DESKTOP_LOG_ECHO_ENV = "OD_DESKTOP_LOG_ECHO";
 
 const INTERNAL_PACKAGES = [
-  { directory: "packages/contracts", name: "@open-design/contracts" },
-  { directory: "packages/sidecar-proto", name: "@open-design/sidecar-proto" },
-  { directory: "packages/sidecar", name: "@open-design/sidecar" },
-  { directory: "packages/platform", name: "@open-design/platform" },
-  { directory: "apps/daemon", name: "@open-design/daemon" },
-  { directory: "apps/web", name: "@open-design/web" },
-  { directory: "apps/desktop", name: "@open-design/desktop" },
-  { directory: "apps/packaged", name: "@open-design/packaged" },
+  { directory: "packages/contracts", name: "@novelcut/contracts" },
+  { directory: "packages/sidecar-proto", name: "@novelcut/sidecar-proto" },
+  { directory: "packages/sidecar", name: "@novelcut/sidecar" },
+  { directory: "packages/platform", name: "@novelcut/platform" },
+  { directory: "apps/daemon", name: "@novelcut/daemon" },
+  { directory: "apps/web", name: "@novelcut/web" },
+  { directory: "apps/desktop", name: "@novelcut/desktop" },
+  { directory: "apps/packaged", name: "@novelcut/packaged" },
 ] as const;
 
 export function sanitizeNamespace(value: string): string {
@@ -99,7 +99,7 @@ export function buildDockerArgs(
   //
   // Shell-interpolation safety for the inner `bash -lc` command:
   //   - config.namespace is sanitized at config-time by resolveNamespace() in
-  //     @open-design/sidecar-proto (restricted to namespace charset)
+  //     @novelcut/sidecar-proto (restricted to namespace charset)
   //   - config.to is enum-validated by resolveToolPackBuildOutput() in config.ts
   //     to one of "all" | "appimage" | "dir"
   //   - config.portable is a boolean
@@ -291,14 +291,14 @@ async function buildWorkspaceArtifacts(config: ToolPackConfig): Promise<void> {
   const webNextEnvPath = join(config.workspaceRoot, "apps", "web", "next-env.d.ts");
   const previousWebNextEnv = await readFile(webNextEnvPath, "utf8").catch(() => null);
 
-  await runPnpm(config, ["--filter", "@open-design/contracts", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/sidecar-proto", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/sidecar", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/platform", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/daemon", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/contracts", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/sidecar-proto", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/sidecar", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/platform", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/daemon", "build"]);
   try {
-    await runPnpm(config, ["--filter", "@open-design/web", "build"], { OD_WEB_OUTPUT_MODE: "server" });
-    await runPnpm(config, ["--filter", "@open-design/web", "build:sidecar"]);
+    await runPnpm(config, ["--filter", "@novelcut/web", "build"], { OD_WEB_OUTPUT_MODE: "server" });
+    await runPnpm(config, ["--filter", "@novelcut/web", "build:sidecar"]);
   } finally {
     if (previousWebNextEnv == null) {
       await rm(webNextEnvPath, { force: true });
@@ -306,8 +306,8 @@ async function buildWorkspaceArtifacts(config: ToolPackConfig): Promise<void> {
       await writeFile(webNextEnvPath, previousWebNextEnv, "utf8");
     }
   }
-  await runPnpm(config, ["--filter", "@open-design/desktop", "build"]);
-  await runPnpm(config, ["--filter", "@open-design/packaged", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/desktop", "build"]);
+  await runPnpm(config, ["--filter", "@novelcut/packaged", "build"]);
 }
 
 // --- Step 3: Tarball + resource helpers ---
@@ -375,7 +375,7 @@ async function writeAssembledApp(
   };
   await writeFile(paths.assembledPackageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
 
-  const mainStub = `"use strict";\nrequire("@open-design/packaged");\n`;
+  const mainStub = `"use strict";\nrequire("@novelcut/packaged");\n`;
   await writeFile(paths.assembledMainEntryPath, mainStub, "utf8");
 
   await writeFile(
@@ -1071,7 +1071,7 @@ export type LinuxCleanupResult = {
 
 // Paths resolved relative to the assembled app written during `tools-pack linux build`.
 // The headless entry lives at:
-//   <assembledAppRoot>/node_modules/@open-design/packaged/dist/headless.mjs
+//   <assembledAppRoot>/node_modules/@novelcut/packaged/dist/headless.mjs
 // The bundled Node binary lives at:
 //   <namespaceRoot>/resources/open-design/bin/node  (populated by copyResourceTree)
 

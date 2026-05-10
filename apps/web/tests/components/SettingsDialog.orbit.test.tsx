@@ -3,7 +3,7 @@
 import { StrictMode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ConnectorDetail } from '@open-design/contracts';
+import type { ConnectorDetail } from '@novelcut/contracts';
 
 import { SettingsDialog } from '../../src/components/SettingsDialog';
 import { fetchConnectors, fetchSkills } from '../../src/providers/registry';

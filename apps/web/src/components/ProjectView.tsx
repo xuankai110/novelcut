@@ -30,7 +30,7 @@ import {
   writeProjectTextFile,
 } from '../providers/registry';
 import { useProjectFileEvents, type ProjectEvent } from '../providers/project-events';
-import { composeSystemPrompt, type ResearchOptions } from '@open-design/contracts';
+import { composeSystemPrompt, type ResearchOptions } from '@novelcut/contracts';
 import { navigate } from '../router';
 import { agentDisplayName, agentModelDisplayName } from '../utils/agentLabels';
 import {

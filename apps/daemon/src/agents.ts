@@ -8,7 +8,7 @@ import { homedir } from 'node:os';
 import {
   createCommandInvocation,
   wellKnownUserToolchainBins,
-} from '@open-design/platform';
+} from '@novelcut/platform';
 import { detectAcpModels } from './acp.js';
 import { parsePiModels } from './pi-rpc.js';
 
@@ -972,9 +972,9 @@ export const AGENT_DEFS = [
   },
 ];
 
-// Toolchain dir computation lives in @open-design/platform so the daemon
+// Toolchain dir computation lives in @novelcut/platform so the daemon
 // resolver and the packaged sidecar PATH builder can never drift again
-// (issue #442). See @open-design/platform's wellKnownUserToolchainBins
+// (issue #442). See @novelcut/platform's wellKnownUserToolchainBins
 // for the canonical search list. The wrapper here just preserves the
 // OD_AGENT_HOME test hook and the per-home cache that reduces
 // filesystem scans on every resolveOnPath() call.

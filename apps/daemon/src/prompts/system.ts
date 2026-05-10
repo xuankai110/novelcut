@@ -35,7 +35,7 @@ import { DECK_FRAMEWORK_DIRECTIVE } from './deck-framework.js';
 import { MEDIA_GENERATION_CONTRACT } from './media-contract.js';
 import { IMAGE_MODELS } from '../media-models.js';
 import { renderPanelPrompt } from './panel.js';
-import { defaultCritiqueConfig, type CritiqueConfig } from '@open-design/contracts/critique';
+import { defaultCritiqueConfig, type CritiqueConfig } from '@novelcut/contracts/critique';
 
 type ProjectMetadata = {
   kind?: string;

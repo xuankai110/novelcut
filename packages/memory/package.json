@@ -1,0 +1,21 @@
+{
+  "name": "@novelcut/memory",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Local semantic memory using ONNX embeddings + SQLite vector store.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

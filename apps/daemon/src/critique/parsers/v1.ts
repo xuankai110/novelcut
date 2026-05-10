@@ -1,4 +1,4 @@
-import type { PanelEvent, PanelistRole } from '@open-design/contracts/critique';
+import type { PanelEvent, PanelistRole } from '@novelcut/contracts/critique';
 import { MalformedBlockError, MissingArtifactError, OversizeBlockError } from '../errors.js';
 
 const KNOWN_ROLES: ReadonlySet<string> = new Set(['designer', 'critic', 'brand', 'a11y', 'copy']);

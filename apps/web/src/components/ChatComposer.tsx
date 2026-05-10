@@ -13,7 +13,7 @@ import { patchProject } from "../state/projects";
 import { fetchMcpServers } from "../state/mcp";
 import type { McpServerConfig } from "../state/mcp";
 import type { AppConfig, ChatAttachment, ChatCommentAttachment, ProjectFile, ProjectMetadata } from "../types";
-import type { ResearchOptions } from '@open-design/contracts';
+import type { ResearchOptions } from '@novelcut/contracts';
 import { Icon } from "./Icon";
 import { BUILT_IN_PETS, CUSTOM_PET_ID, resolveActivePet } from "./pet/pets";
 

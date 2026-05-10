@@ -1,6 +1,6 @@
 import { spawn, type SpawnOptionsWithoutStdio } from "node:child_process";
 
-import { createPackageManagerInvocation } from "@open-design/platform";
+import { createPackageManagerInvocation } from "@novelcut/platform";
 
 import type { ToolPackConfig } from "../config.js";
 
@@ -73,5 +73,5 @@ export async function runNpmInstall(appRoot: string): Promise<void> {
 }
 
 export async function runEsbuild(config: ToolPackConfig, args: string[]): Promise<void> {
-  await runPnpm(config, ["--filter", "@open-design/packaged", "exec", "esbuild", ...args]);
+  await runPnpm(config, ["--filter", "@novelcut/packaged", "exec", "esbuild", ...args]);
 }

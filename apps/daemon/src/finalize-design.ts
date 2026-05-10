@@ -19,7 +19,7 @@
 // to set it; Bedrock / self-hosted-proxy users still can.
 //
 // Inline `PersistedAgentEvent` shape is restated in this file (the daemon
-// tsconfig does not resolve the `@open-design/contracts/api/chat` subpath
+// tsconfig does not resolve the `@novelcut/contracts/api/chat` subpath
 // export — verified during PR #493). Schema-mismatch tests in the test
 // file would catch any drift between this restated union and the contract.
 
@@ -31,7 +31,7 @@ import type {
   FinalizeAnthropicRequest,
   FinalizeAnthropicResponse,
   FinalizeArtifactRef,
-} from '@open-design/contracts/api/finalize';
+} from '@novelcut/contracts/api/finalize';
 import { getProject } from './db.js';
 import { readDesignSystem } from './design-systems.js';
 import {
@@ -44,7 +44,7 @@ import { exportProjectTranscript } from './transcript-export.js';
 
 // Re-export the request/response types so existing daemon-internal
 // imports (and the route handler) keep their referenced names. The
-// canonical definitions live in @open-design/contracts/api/finalize
+// canonical definitions live in @novelcut/contracts/api/finalize
 // per @lefarcen's P2 review feedback on PR #832, with a real runtime
 // entrypoint per @mrcfps's review feedback on the same PR.
 export type {

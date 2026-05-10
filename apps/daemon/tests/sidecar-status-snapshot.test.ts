@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { DaemonStatusSnapshot } from '@open-design/sidecar-proto';
+import type { DaemonStatusSnapshot } from '@novelcut/sidecar-proto';
 
 import { resetDesktopAuthForTests, setDesktopAuthSecret } from '../src/server.js';
 import { withCurrentDesktopAuthGate } from '../src/sidecar/server.js';

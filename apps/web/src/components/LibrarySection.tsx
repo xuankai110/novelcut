@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useT } from '../i18n';
 import { Icon } from './Icon';
 import type { AppConfig, InstallInput } from '../types';
-import type { SkillSummary, DesignSystemSummary } from '@open-design/contracts';
+import type { SkillSummary, DesignSystemSummary } from '@novelcut/contracts';
 import {
   fetchSkills,
   fetchDesignSystems,

@@ -17,7 +17,7 @@ import type {
   ApiErrorCode,
   FinalizeAnthropicRequest,
   FinalizeAnthropicResponse,
-} from '@open-design/contracts';
+} from '@novelcut/contracts';
 
 // 130 000 ms = daemon timeout (120 s) + 10 s buffer so the daemon's
 // own retry/timeout layer always wins under normal failure modes.

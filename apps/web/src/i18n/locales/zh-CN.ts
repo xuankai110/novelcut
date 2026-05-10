@@ -204,7 +204,7 @@ export const zhCN: Dict = {
   'settings.mcpBuildDaemon': '请先构建守护进程。',
   'settings.mcpNodeMissing': 'Node 二进制文件缺失。',
   'settings.mcpBuildHint':
-    'apps/daemon/dist/cli.js 缺失。请运行 `pnpm --filter @open-design/daemon build` 并刷新。',
+    'apps/daemon/dist/cli.js 缺失。请运行 `pnpm --filter @novelcut/daemon build` 并刷新。',
   'settings.mcpMethodCli': 'CLI 命令',
   'settings.mcpInstructionCli': '在你的终端中运行此命令。',
   'settings.mcpMethodToml': 'TOML 配置',

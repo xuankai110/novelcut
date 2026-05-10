@@ -1,0 +1,21 @@
+{
+  "name": "@novelcut/vendor",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Programmable vendor system — LLM/image/video providers as hot-loadable TS modules.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

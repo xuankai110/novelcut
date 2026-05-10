@@ -11,8 +11,8 @@ import {
   type DesktopScreenshotResult,
   type DesktopStatusSnapshot,
   type SidecarStamp,
-} from "@open-design/sidecar-proto";
-import { createSidecarLaunchEnv, requestJsonIpc, resolveAppIpcPath } from "@open-design/sidecar";
+} from "@novelcut/sidecar-proto";
+import { createSidecarLaunchEnv, requestJsonIpc, resolveAppIpcPath } from "@novelcut/sidecar";
 import {
   collectProcessTreePids,
   createProcessStampArgs,
@@ -21,7 +21,7 @@ import {
   readLogTail,
   spawnBackgroundProcess,
   stopProcesses,
-} from "@open-design/platform";
+} from "@novelcut/platform";
 
 import type { ToolPackConfig } from "../config.js";
 import { DESKTOP_LOG_ECHO_ENV } from "./constants.js";

@@ -1,5 +1,5 @@
 {
-  "name": "@open-design/daemon",
+  "name": "@novelcut/daemon",
   "version": "0.6.0",
   "private": true,
   "type": "module",
@@ -29,14 +29,14 @@
     "dev": "pnpm run build && node dist/cli.js --no-open",
     "start": "pnpm run build && node dist/cli.js",
     "test": "vitest run -c vitest.config.ts",
-    "typecheck": "pnpm --filter @open-design/contracts build && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit"
+    "typecheck": "pnpm --filter @novelcut/contracts build && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@open-design/contracts": "workspace:*",
-    "@open-design/platform": "workspace:*",
-    "@open-design/sidecar": "workspace:*",
-    "@open-design/sidecar-proto": "workspace:*",
+    "@novelcut/contracts": "workspace:*",
+    "@novelcut/platform": "workspace:*",
+    "@novelcut/sidecar": "workspace:*",
+    "@novelcut/sidecar-proto": "workspace:*",
     "better-sqlite3": "^12.9.0",
     "blake3-wasm": "2.1.5",
     "chokidar": "^5.0.0",

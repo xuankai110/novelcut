@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ConnectorDetail, ImportFolderResponse } from '@open-design/contracts';
+import type { ConnectorDetail, ImportFolderResponse } from '@novelcut/contracts';
 
 // Window.electronAPI is declared globally in apps/web/src/types/electron.d.ts
 // so the new openPath + pickAndImport methods (#451 / PR #974) and

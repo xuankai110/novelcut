@@ -1,5 +1,5 @@
 {
-  "name": "@open-design/sidecar-proto",
+  "name": "@novelcut/sidecar-proto",
   "version": "0.6.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "@open-design/tools-dev",
+  "name": "@novelcut/tools-dev",
   "version": "0.6.0",
   "private": true,
   "type": "module",
@@ -13,9 +13,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@open-design/platform": "workspace:*",
-    "@open-design/sidecar": "workspace:*",
-    "@open-design/sidecar-proto": "workspace:*",
+    "@novelcut/platform": "workspace:*",
+    "@novelcut/sidecar": "workspace:*",
+    "@novelcut/sidecar-proto": "workspace:*",
     "cac": "6.7.14"
   },
   "devDependencies": {

@@ -6,7 +6,7 @@ import type {
   ConnectorDetailResponse,
   ConnectorListResponse,
   ConnectorStatusResponse,
-} from '@open-design/contracts';
+} from '@novelcut/contracts';
 import type {
   AgentInfo,
   AppVersionInfo,

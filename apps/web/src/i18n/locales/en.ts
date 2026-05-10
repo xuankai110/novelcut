@@ -206,7 +206,7 @@ export const en: Dict = {
   'settings.mcpBuildDaemon': 'Build the daemon first.',
   'settings.mcpNodeMissing': 'Node binary is missing.',
   'settings.mcpBuildHint':
-    'apps/daemon/dist/cli.js is missing. Run `pnpm --filter @open-design/daemon build` and refresh.',
+    'apps/daemon/dist/cli.js is missing. Run `pnpm --filter @novelcut/daemon build` and refresh.',
   'settings.mcpMethodCli': 'CLI command',
   'settings.mcpInstructionCli': 'Run this in your terminal.',
   'settings.mcpMethodToml': 'TOML config',

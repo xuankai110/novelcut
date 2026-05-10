@@ -17,8 +17,8 @@ import {
   type DesktopScreenshotResult,
   type DesktopStatusSnapshot,
   type WebStatusSnapshot,
-} from "@open-design/sidecar-proto";
-import { createSidecarLaunchEnv, requestJsonIpc } from "@open-design/sidecar";
+} from "@novelcut/sidecar-proto";
+import { createSidecarLaunchEnv, requestJsonIpc } from "@novelcut/sidecar";
 import {
   collectProcessTreePids,
   createPackageManagerInvocation,
@@ -29,7 +29,7 @@ import {
   spawnBackgroundProcess,
   stopProcesses,
   type StopProcessesResult,
-} from "@open-design/platform";
+} from "@novelcut/platform";
 
 import {
   ALL_APPS,
@@ -480,8 +480,8 @@ async function spawnWebRuntime(config: ToolDevConfig, options: CliOptions): Prom
 }
 
 async function buildDesktop(config: ToolDevConfig, logHandle: FileHandle): Promise<void> {
-  await logHandle.write(`\n[tools-dev] building @open-design/desktop at ${new Date().toISOString()}\n`);
-  const invocation = createPackageManagerInvocation(["--filter", "@open-design/desktop", "build"], process.env);
+  await logHandle.write(`\n[tools-dev] building @novelcut/desktop at ${new Date().toISOString()}\n`);
+  const invocation = createPackageManagerInvocation(["--filter", "@novelcut/desktop", "build"], process.env);
   await runLoggedCommand({
     args: invocation.args,
     command: invocation.command,
@@ -991,7 +991,7 @@ function addPortOptions(command: ReturnType<typeof cli.command>) {
   return command
     .option("--daemon-port <port>", "force daemon port; conflict quick-fails")
     .option("--web-port <port>", "force web port; conflict quick-fails")
-    .option("--prod", "use production build (requires pnpm --filter @open-design/web build first)");
+    .option("--prod", "use production build (requires pnpm --filter @novelcut/web build first)");
 }
 
 addPortOptions(addSharedOptions(cli.command("start [app]", "Start daemon, web, desktop, or all when app is omitted"))).action(

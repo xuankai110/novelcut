@@ -20,8 +20,8 @@
     "typecheck": "pnpm -r --workspace-concurrency=1 --if-present run typecheck && tsc -p scripts/tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@open-design/tools-dev": "workspace:*",
-    "@open-design/tools-pack": "workspace:*",
+    "@novelcut/tools-dev": "workspace:*",
+    "@novelcut/tools-pack": "workspace:*",
     "@types/node": "^20.17.10",
     "tsx": "4.21.0",
     "typescript": "^5.6.3"

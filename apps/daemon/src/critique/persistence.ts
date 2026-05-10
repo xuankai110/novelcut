@@ -3,12 +3,12 @@ import {
   CRITIQUE_RUN_STATUSES,
   type CritiqueRoundSummary,
   type CritiqueRunStatus,
-} from '@open-design/contracts/critique';
+} from '@novelcut/contracts/critique';
 
 /**
  * Re-export the public contract types and enumeration so existing
  * daemon-side imports (`./persistence.js`) keep working unchanged. The
- * canonical definitions live in `@open-design/contracts/critique` so the
+ * canonical definitions live in `@novelcut/contracts/critique` so the
  * web layer can consume the same shapes and the same display order
  * through the rerun / history endpoints (AGENTS.md requirement that
  * shared API DTOs live in packages/contracts).

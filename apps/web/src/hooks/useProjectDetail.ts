@@ -6,7 +6,7 @@
 // emit `null` otherwise so callers can degrade their UI gracefully.
 
 import { useCallback, useEffect, useState } from 'react';
-import type { Project, ProjectDetailResponse } from '@open-design/contracts';
+import type { Project, ProjectDetailResponse } from '@novelcut/contracts';
 
 export interface ProjectDetailState {
   project: Project | null;

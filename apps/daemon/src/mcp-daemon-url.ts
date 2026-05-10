@@ -5,8 +5,8 @@ import {
   SIDECAR_ENV,
   SIDECAR_MESSAGES,
   type DaemonStatusSnapshot,
-} from "@open-design/sidecar-proto";
-import { requestJsonIpc, resolveAppIpcPath } from "@open-design/sidecar";
+} from "@novelcut/sidecar-proto";
+import { requestJsonIpc, resolveAppIpcPath } from "@novelcut/sidecar";
 
 export const MCP_DEFAULT_DAEMON_URL = "http://127.0.0.1:7456";
 

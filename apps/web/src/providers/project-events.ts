@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { LiveArtifactRefreshSsePayload, LiveArtifactSsePayload } from '@open-design/contracts';
+import type { LiveArtifactRefreshSsePayload, LiveArtifactSsePayload } from '@novelcut/contracts';
 export interface ProjectFileChangeEvent {
   type: 'file-changed';
   path: string;

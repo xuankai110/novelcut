@@ -197,7 +197,7 @@ export const zhTW: Dict = {
   'settings.mcpBuildDaemon': '請先建置守護行程。',
   'settings.mcpNodeMissing': '缺少 Node 執行檔。',
   'settings.mcpBuildHint':
-    '缺少 apps/daemon/dist/cli.js。請執行 `pnpm --filter @open-design/daemon build` 後重新整理。',
+    '缺少 apps/daemon/dist/cli.js。請執行 `pnpm --filter @novelcut/daemon build` 後重新整理。',
   'settings.mcpMethodCli': 'CLI 指令',
   'settings.mcpInstructionCli': '在您的終端機中執行此指令。',
   'settings.mcpMethodToml': 'TOML 設定檔',

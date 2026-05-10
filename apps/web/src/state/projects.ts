@@ -5,7 +5,7 @@
 // These helpers fail soft (returning null / [] on transport errors) so
 // the UI can stay rendered when the daemon is briefly unreachable.
 
-import type { ImportFolderRequest, ImportFolderResponse } from '@open-design/contracts';
+import type { ImportFolderRequest, ImportFolderResponse } from '@novelcut/contracts';
 import { randomUUID } from '../utils/uuid';
 import type {
   ChatMessage,

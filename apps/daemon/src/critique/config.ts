@@ -1,5 +1,5 @@
-import { defaultCritiqueConfig, FALLBACK_POLICIES } from '@open-design/contracts/critique';
-import type { CritiqueConfig } from '@open-design/contracts/critique';
+import { defaultCritiqueConfig, FALLBACK_POLICIES } from '@novelcut/contracts/critique';
+import type { CritiqueConfig } from '@novelcut/contracts/critique';
 
 /**
  * Load CritiqueConfig from process.env. Keys map 1:1 to OD_CRITIQUE_*.

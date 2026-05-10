@@ -617,7 +617,7 @@ export function App() {
   // sees the path or the HMAC token; it just receives the same
   // ImportFolderResponse shape that `importFolderProject` would
   // produce on web, and the App-level state update is identical.
-  const handleImportFolderResponse = useCallback(async (result: import('@open-design/contracts').ImportFolderResponse) => {
+  const handleImportFolderResponse = useCallback(async (result: import('@novelcut/contracts').ImportFolderResponse) => {
     setProjects((curr) => [result.project, ...curr.filter((p) => p.id !== result.project.id)]);
     navigate({
       kind: 'project',

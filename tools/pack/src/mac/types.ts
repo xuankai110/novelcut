@@ -1,4 +1,4 @@
-import type { DesktopEvalResult, DesktopScreenshotResult, DesktopStatusSnapshot, SidecarStamp } from "@open-design/sidecar-proto";
+import type { DesktopEvalResult, DesktopScreenshotResult, DesktopStatusSnapshot, SidecarStamp } from "@novelcut/sidecar-proto";
 import type { CacheReport } from "../cache.js";
 import type { ToolPackBuildOutput, ToolPackConfig } from "../config.js";
 import type { INTERNAL_PACKAGES } from "./constants.js";

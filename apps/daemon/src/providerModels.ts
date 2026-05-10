@@ -1,13 +1,13 @@
 import type {
   ConnectionTestKind,
   ConnectionTestProtocol,
-} from '@open-design/contracts/api/connectionTest';
+} from '@novelcut/contracts/api/connectionTest';
 import type {
   ProviderModelOption,
   ProviderModelsRequest,
   ProviderModelsResponse,
-} from '@open-design/contracts/api/providerModels';
-import { isLoopbackApiHost, validateBaseUrl } from '@open-design/contracts/api/connectionTest';
+} from '@novelcut/contracts/api/providerModels';
+import { isLoopbackApiHost, validateBaseUrl } from '@novelcut/contracts/api/connectionTest';
 import { redactSecrets } from './connectionTest.js';
 
 type ProviderModelsInput = ProviderModelsRequest & { signal?: AbortSignal };

@@ -25,7 +25,7 @@ import {
   resolveAgentBin,
   spawnEnvForAgent,
 } from './agents.js';
-import { createCommandInvocation } from '@open-design/platform';
+import { createCommandInvocation } from '@novelcut/platform';
 import { attachAcpSession } from './acp.js';
 import { attachPiRpcSession } from './pi-rpc.js';
 import { createClaudeStreamHandler } from './claude-stream.js';
@@ -41,9 +41,9 @@ import {
   type ConnectionTestResponse,
   type ParsedBaseUrl,
   type ProviderTestRequest,
-} from '@open-design/contracts/api/connectionTest';
+} from '@novelcut/contracts/api/connectionTest';
 
-export { validateBaseUrl } from '@open-design/contracts/api/connectionTest';
+export { validateBaseUrl } from '@novelcut/contracts/api/connectionTest';
 
 // Aggressive but not punitive — happy paths usually return in under 2 s.
 const PROVIDER_TIMEOUT_MS = 12_000;

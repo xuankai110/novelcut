@@ -21,7 +21,7 @@ import type {
   DaemonAgentPayload,
   ResearchOptions,
   SseErrorPayload,
-} from '@open-design/contracts';
+} from '@novelcut/contracts';
 import type { StreamHandlers } from './anthropic';
 
 /**

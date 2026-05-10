@@ -9,7 +9,7 @@ const distEntry = resolve(entryDir, "../dist/index.mjs");
 
 if (!existsSync(distEntry)) {
   throw new Error(
-    `tools-pack dist entry not found at ${distEntry}. Run "pnpm --filter @open-design/tools-pack build" first.`,
+    `tools-pack dist entry not found at ${distEntry}. Run "pnpm --filter @novelcut/tools-pack build" first.`,
   );
 }
 

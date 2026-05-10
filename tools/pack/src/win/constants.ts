@@ -30,12 +30,12 @@ export const NSIS_INSTALLER_LANGUAGE_BY_WEB_LOCALE = {
   "zh-TW": "zh_TW",
 } as const;
 export const INTERNAL_PACKAGES = [
-  { directory: "packages/contracts", name: "@open-design/contracts" },
-  { directory: "packages/sidecar-proto", name: "@open-design/sidecar-proto" },
-  { directory: "packages/sidecar", name: "@open-design/sidecar" },
-  { directory: "packages/platform", name: "@open-design/platform" },
-  { directory: "apps/daemon", name: "@open-design/daemon" },
-  { directory: "apps/web", name: "@open-design/web" },
-  { directory: "apps/desktop", name: "@open-design/desktop" },
-  { directory: "apps/packaged", name: "@open-design/packaged" },
+  { directory: "packages/contracts", name: "@novelcut/contracts" },
+  { directory: "packages/sidecar-proto", name: "@novelcut/sidecar-proto" },
+  { directory: "packages/sidecar", name: "@novelcut/sidecar" },
+  { directory: "packages/platform", name: "@novelcut/platform" },
+  { directory: "apps/daemon", name: "@novelcut/daemon" },
+  { directory: "apps/web", name: "@novelcut/web" },
+  { directory: "apps/desktop", name: "@novelcut/desktop" },
+  { directory: "apps/packaged", name: "@novelcut/packaged" },
 ] as const;

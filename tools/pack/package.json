@@ -1,5 +1,5 @@
 {
-  "name": "@open-design/tools-pack",
+  "name": "@novelcut/tools-pack",
   "version": "0.6.0",
   "private": true,
   "type": "module",
@@ -14,9 +14,9 @@
   },
   "dependencies": {
     "@electron/rebuild": "4.0.4",
-    "@open-design/platform": "workspace:*",
-    "@open-design/sidecar": "workspace:*",
-    "@open-design/sidecar-proto": "workspace:*",
+    "@novelcut/platform": "workspace:*",
+    "@novelcut/sidecar": "workspace:*",
+    "@novelcut/sidecar-proto": "workspace:*",
     "@electron/notarize": "3.1.1",
     "cac": "6.7.14",
     "electron-builder": "26.8.1"

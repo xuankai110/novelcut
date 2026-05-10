@@ -2,7 +2,7 @@ import type {
   ResearchDepth,
   ResearchFindings,
   ResearchSource,
-} from '@open-design/contracts/api/research';
+} from '@novelcut/contracts/api/research';
 import { resolveProviderConfig } from '../media-config.js';
 import { tavilySearch, TavilyError } from './tavily.js';
 

@@ -12,7 +12,7 @@
 // the main side so even legacy projects with a `metadata.baseDir` set
 // outside the HMAC-gated flow cannot be opened.
 
-import type { ImportFolderResponse } from '@open-design/contracts';
+import type { ImportFolderResponse } from '@novelcut/contracts';
 
 export {};
 
