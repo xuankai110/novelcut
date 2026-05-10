@@ -1,22 +1,34 @@
-import type { Chapter, EpisodeBlueprint, Project, StorySkeleton } from "../types";
+import type { Chapter, EpisodeBlueprint, Project, StorySkeleton, SkeletonProvenance } from "../types";
 import { chat, extractJson, type LLMConfig } from "../llm";
 import { SKELETON_SYSTEM, buildSkeletonUser, EPISODE_PLAN_SYSTEM, buildEpisodePlanUser } from "./prompts";
 
-export interface RunSkeletonResult {
-  skeleton: StorySkeleton;
-  raw: string;
+export interface RunSkeletonResult { skeleton: StorySkeleton; raw: string; }
+
+export function buildProvenance(project: Project, chapters: Chapter[]): SkeletonProvenance {
+  const usedChapters = chapters.filter(c => c.eventsStatus === "done");
+  const wordCount = usedChapters.reduce((s, c) => s + c.body.length, 0);
+  const eventCount = usedChapters.reduce((s, c) => s + (c.eventCount ?? 0), 0);
+  const target = Math.max(1, project.episodeCount * 1500);
+  return {
+    chapterIds: usedChapters.map(c => c.id).sort(),
+    chapterCount: usedChapters.length,
+    eventCount,
+    wordCount,
+    targetEpisodes: project.episodeCount,
+    coverage: Math.min(2, wordCount / target),  // cap at 2x for sanity
+  };
 }
 
 export async function runSkeleton(
   llm: LLMConfig, project: Project, chapters: Chapter[],
 ): Promise<RunSkeletonResult> {
+  const used = chapters.filter(c => c.eventsStatus === "done");
   const resp = await chat(llm, {
     messages: [
       { role: "system", content: SKELETON_SYSTEM },
-      { role: "user", content: buildSkeletonUser(project, chapters) },
+      { role: "user", content: buildSkeletonUser(project, used) },
     ],
-    temperature: 0.4,
-    json: true,
+    temperature: 0.4, json: true,
   });
   const parsed = extractJson<Partial<StorySkeleton>>(resp.content);
   const skeleton: StorySkeleton = {
@@ -32,10 +44,10 @@ export async function runSkeleton(
       act3: normAct(parsed.threeActs?.act3, "?-?集"),
     },
     adaptationPrinciples: Array.isArray(parsed.adaptationPrinciples)
-      ? parsed.adaptationPrinciples.map(String)
-      : [],
+      ? parsed.adaptationPrinciples.map(String) : [],
     generatedAt: Date.now(),
     model: llm.model,
+    basedOn: buildProvenance(project, chapters),
   };
   return { skeleton, raw: resp.content };
 }
@@ -48,21 +60,18 @@ function normAct(a: any, fallbackRange: string) {
   };
 }
 
-export interface RunEpisodePlanResult {
-  blueprints: EpisodeBlueprint[];
-  raw: string;
-}
+export interface RunEpisodePlanResult { blueprints: EpisodeBlueprint[]; raw: string; }
 
 export async function runEpisodePlan(
   llm: LLMConfig, project: Project, chapters: Chapter[], skeleton: StorySkeleton, episodeCount: number,
 ): Promise<RunEpisodePlanResult> {
+  const used = chapters.filter(c => c.eventsStatus === "done");
   const resp = await chat(llm, {
     messages: [
       { role: "system", content: EPISODE_PLAN_SYSTEM },
-      { role: "user", content: buildEpisodePlanUser(project, chapters, skeleton, episodeCount) },
+      { role: "user", content: buildEpisodePlanUser(project, used, skeleton, episodeCount) },
     ],
-    temperature: 0.4,
-    json: true,
+    temperature: 0.4, json: true,
   });
   const parsed = extractJson<{ episodes?: any[] } | any[]>(resp.content);
   const list = Array.isArray(parsed) ? parsed : (parsed.episodes ?? []);

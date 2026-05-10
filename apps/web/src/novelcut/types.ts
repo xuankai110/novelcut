@@ -22,16 +22,19 @@ export interface Chapter {
   eventCount?: number; events?: ChapterEvent[]; errorMessage?: string;
 }
 
-export interface CharacterCore {
-  name: string;
-  role: string;     // e.g. "女主" | "男主" | "反派"
-  arc: string;      // 弧光描述
-}
+export interface CharacterCore { name: string; role: string; arc: string; }
+export interface ActPlan { range: string; summary: string; keyBeats: string[]; }
 
-export interface ActPlan {
-  range: string;          // e.g. "1-20集"
-  summary: string;
-  keyBeats: string[];
+export interface SkeletonProvenance {
+  /** chapter ids the skeleton was generated from (sorted) */
+  chapterIds: string[];
+  chapterCount: number;
+  eventCount: number;
+  wordCount: number;
+  /** target episodes at generation time */
+  targetEpisodes: number;
+  /** wordCount / (targetEpisodes * 1500) — 0..1+ */
+  coverage: number;
 }
 
 export interface StorySkeleton {
@@ -41,32 +44,20 @@ export interface StorySkeleton {
   characterCores: CharacterCore[];
   threeActs: { act1: ActPlan; act2: ActPlan; act3: ActPlan };
   adaptationPrinciples: string[];
-  /** when generated */
   generatedAt: number;
-  /** model used */
   model?: string;
+  basedOn?: SkeletonProvenance;
 }
 
 export interface EpisodeBlueprint {
-  index: number;
-  title: string;
-  summary: string;
-  beats: string[];
-  hookOpen: string;
-  hookEnd: string;
-  retainsEvents: string[];
-  newScenes?: string[];
+  index: number; title: string; summary: string;
+  beats: string[]; hookOpen: string; hookEnd: string;
+  retainsEvents: string[]; newScenes?: string[];
 }
 
 export interface Episode {
-  id: string;
-  projectId: string;
-  index: number;
-  title: string;
-  /** rich plan from 编剧 Agent */
-  blueprint?: EpisodeBlueprint;
-  /** legacy field */
-  beats?: string;
+  id: string; projectId: string; index: number; title: string;
+  blueprint?: EpisodeBlueprint; beats?: string;
   status: "draft" | "scripted" | "shotlisted" | "rendered";
 }
 

@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Project, StorySkeleton, Episode } from "../types";
 import {
   listChapters, getSkeleton, saveSkeleton, clearSkeleton,
   listEpisodes, setEpisodes as saveEpisodes, appendTask, genId,
 } from "../store";
 import { loadLLMConfig, LLMError } from "../llm";
-import { runSkeleton, runEpisodePlan } from "../agent/runner";
+import { runSkeleton, runEpisodePlan, buildProvenance } from "../agent/runner";
+import { checkSkeletonStaleness, coverageLabel } from "../agent/staleness";
 import { SettingsDialog } from "../SettingsDialog";
 
 export function ScriptAgentTab({ project }: { project: Project }) {
@@ -20,10 +21,14 @@ export function ScriptAgentTab({ project }: { project: Project }) {
 
   const llm = loadLLMConfig();
   const llmReady = !!llm?.apiKey;
+
   const eventCount = chapters.reduce((s, c) => s + (c.eventCount ?? 0), 0);
   const chaptersWithEvents = chapters.filter(c => c.eventsStatus === "done");
+  const currentProvenance = useMemo(() => buildProvenance(project, chapters), [chapters, project]);
+  const currentCoverage = currentProvenance.coverage;
+  const stale = useMemo(() => checkSkeletonStaleness(skeleton, chapters), [skeleton, chapters]);
+  const skeletonCov = coverageLabel(skeleton?.basedOn?.coverage);
 
-  // Default episode count: respect project target but cap by event budget (2-3 events per ep)
   const suggestedEp = Math.max(3, Math.min(project.episodeCount, Math.floor(eventCount / 2.5)));
   const [episodeCount, setEpisodeCount] = useState(suggestedEp);
 
@@ -35,6 +40,12 @@ export function ScriptAgentTab({ project }: { project: Project }) {
     }
   }, [showSettings, project.id]);
 
+  const reload = () => {
+    setChapters(listChapters(project.id));
+    setSkel(getSkeleton(project.id));
+    setEpisodesState(listEpisodes(project.id));
+  };
+
   const onRunSkeleton = async () => {
     if (!llm) { setShowSettings(true); return; }
     setSkelError(null);
@@ -42,15 +53,16 @@ export function ScriptAgentTab({ project }: { project: Project }) {
     const taskId = genId("task");
     appendTask({
       id: taskId, projectId: project.id, kind: "agent.skeleton", model: llm.model,
-      description: "生成故事骨架", status: "running", createdAt: Date.now(),
+      description: `生成故事骨架 (基于 ${chaptersWithEvents.length} 章 / ${currentProvenance.wordCount.toLocaleString()} 字)`,
+      status: "running", createdAt: Date.now(),
     });
     try {
-      const { skeleton } = await runSkeleton(llm, project, chaptersWithEvents);
+      const { skeleton } = await runSkeleton(llm, project, chapters);
       saveSkeleton(project.id, skeleton);
       setSkel(skeleton);
       appendTask({
         id: taskId + "_done", projectId: project.id, kind: "agent.skeleton", model: llm.model,
-        description: `骨架就绪 · ${skeleton.characterCores.length} 个主要人物`,
+        description: `骨架就绪 · ${skeleton.characterCores.length} 个主要人物 · 覆盖率 ${Math.round((skeleton.basedOn?.coverage ?? 0) * 100)}%`,
         status: "done", createdAt: Date.now(), finishedAt: Date.now(),
       });
     } catch (e) {
@@ -66,6 +78,19 @@ export function ScriptAgentTab({ project }: { project: Project }) {
     }
   };
 
+  const handleRegenSkeleton = () => {
+    const hasEpisodes = episodes.length > 0;
+    let msg = "重新生成会覆盖现有骨架。";
+    if (hasEpisodes) {
+      msg += `\n现有 ${episodes.length} 集 blueprint 与新骨架可能不一致,建议同时重新分集。`;
+    }
+    msg += "\n\n继续?";
+    if (!confirm(msg)) return;
+    clearSkeleton(project.id);
+    setSkel(null);
+    onRunSkeleton();
+  };
+
   const onRunPlan = async () => {
     if (!llm || !skeleton) return;
     setPlanError(null);
@@ -76,7 +101,7 @@ export function ScriptAgentTab({ project }: { project: Project }) {
       description: `分集决策 · 规划 ${episodeCount} 集`, status: "running", createdAt: Date.now(),
     });
     try {
-      const { blueprints } = await runEpisodePlan(llm, project, chaptersWithEvents, skeleton, episodeCount);
+      const { blueprints } = await runEpisodePlan(llm, project, chapters, skeleton, episodeCount);
       const eps: Episode[] = blueprints.map((bp) => ({
         id: genId("ep"), projectId: project.id, index: bp.index, title: bp.title,
         blueprint: bp, status: "draft" as const,
@@ -106,7 +131,10 @@ export function ScriptAgentTab({ project }: { project: Project }) {
       <div className="nc-callout">
         <span className="nc-callout-kicker">三层 Agent · 决策 / 执行 / 监督</span>
         <h4>编剧 Agent —— 从事件图谱到分集决策</h4>
-        <p>两步走:先让 AI 提炼故事骨架 (一句话故事 + 三幕结构 + 改编原则),再基于骨架做分集决策表 (每集梗概/钩子/复用事件)。后续「剧本」tab 会基于这些 blueprint 扩写每集对白。</p>
+        <p>两步走:先让 AI 提炼故事骨架 (一句话故事 + 三幕结构 + 改编原则),再基于骨架做分集决策表 (每集梗概/钩子/复用事件)。</p>
+        <p style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
+          📌 骨架不会锁死:你随时可以追加章节后重新生成。骨架带「覆盖率」标识表明它基于多少原料生成。
+        </p>
       </div>
 
       {!llmReady && (
@@ -114,6 +142,34 @@ export function ScriptAgentTab({ project }: { project: Project }) {
           <span className="nc-callout-kicker">需要先配置大模型</span>
           <h4>编剧 Agent 全程由 LLM 驱动</h4>
           <button className="nc-btn nc-btn-primary" style={{ marginTop: 8 }} onClick={() => setShowSettings(true)}>⚙ 现在去配置</button>
+        </div>
+      )}
+
+      {/* Stale banner — top priority when material has changed since skeleton */}
+      {skeleton && stale.stale && (
+        <div className="nc-callout" style={{
+          marginBottom: 16,
+          background: "linear-gradient(135deg, #fef3c7 0%, #fff 80%)",
+          borderColor: "#fcd34d",
+        }}>
+          <span className="nc-callout-kicker" style={{ color: "#92400e", background: "#fff" }}>
+            ⚠ 骨架可能已过时
+          </span>
+          <h4>原料发生变化 · {stale.reason}</h4>
+          <p>
+            当前骨架基于 {skeleton.basedOn?.chapterCount ?? "?"} 章 · {skeleton.basedOn?.wordCount.toLocaleString() ?? "?"} 字生成
+            ({new Date(skeleton.generatedAt).toLocaleString("zh-CN")})。
+            现在已是 {chaptersWithEvents.length} 章 · {currentProvenance.wordCount.toLocaleString()} 字。
+            建议重新生成骨架以反映最新内容。
+          </p>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button className="nc-btn nc-btn-primary" onClick={handleRegenSkeleton} disabled={!llmReady || skelRunning}>
+              重新生成骨架
+            </button>
+            <button className="nc-btn nc-btn-ghost" onClick={() => alert("已忽略 · 当前骨架仍可用,但下游分集/剧本可能不完整")}>
+              暂时忽略
+            </button>
+          </div>
         </div>
       )}
 
@@ -127,9 +183,12 @@ export function ScriptAgentTab({ project }: { project: Project }) {
           <div className="nc-stat-value">{eventCount}</div>
         </div>
         <div className="nc-stat">
-          <div className="nc-stat-label">故事骨架</div>
-          <div className="nc-stat-value" style={{ fontSize: 17, color: skeleton ? "var(--nc-green)" : "var(--text-faint)" }}>
-            {skeleton ? "✓ 已生成" : "未生成"}
+          <div className="nc-stat-label">原料覆盖率</div>
+          <div className="nc-stat-value" style={{
+            fontSize: 17,
+            color: currentCoverage < 0.6 ? "#f59e0b" : currentCoverage < 1.0 ? "var(--nc-green)" : "var(--nc-cyan-strong)",
+          }}>
+            {Math.round(currentCoverage * 100)}%
           </div>
         </div>
         <div className="nc-stat">
@@ -145,26 +204,31 @@ export function ScriptAgentTab({ project }: { project: Project }) {
         subtitle="一句话故事 · 故事内核 · 隐线 · 主要人物 · 三幕结构 · 改编原则"
         right={
           skeleton && !skelRunning && (
-            <button className="nc-btn nc-btn-ghost" onClick={() => { if (confirm("重新生成会覆盖现有骨架,确定?")) { clearSkeleton(project.id); setSkel(null); onRunSkeleton(); } }}>
-              重新生成
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="nc-pill" style={{ background: skeletonCov.color + "22", color: skeletonCov.color }}>
+                {skeletonCov.label}
+              </span>
+              <button className="nc-btn nc-btn-ghost" onClick={handleRegenSkeleton}>重新生成</button>
+            </div>
           )
         }
       >
         {chaptersWithEvents.length === 0 ? (
           <Empty hint="先到「小说」tab 抽取至少 1 章的事件" />
         ) : !skeleton && !skelRunning ? (
-          <div style={{ textAlign: "center", padding: 24 }}>
-            <button className="nc-btn nc-btn-primary" onClick={onRunSkeleton} disabled={!llmReady || skelRunning}>
-              ▶ 运行 (基于 {chaptersWithEvents.length} 章 · {eventCount} 事件)
-            </button>
-            {skelError && <div style={{ marginTop: 12, fontSize: 12, color: "#b91c1c" }}>失败: {skelError}</div>}
-          </div>
+          <SkeletonPreflight
+            coverage={currentCoverage}
+            wordCount={currentProvenance.wordCount}
+            targetWords={project.episodeCount * 1500}
+            chaptersWithEvents={chaptersWithEvents.length}
+            eventCount={eventCount}
+            llmReady={llmReady}
+            onRun={onRunSkeleton}
+            onGoImport={() => (window.location.hash = `/p/${project.id}/novel`)}
+            error={skelError}
+          />
         ) : skelRunning ? (
-          <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)" }}>
-            <div style={{ marginBottom: 6, fontSize: 18 }}>⏳</div>
-            正在生成故事骨架… (通常 15-40 秒)
-          </div>
+          <RunningState label="正在生成故事骨架… (通常 15-40 秒)" />
         ) : skeleton ? (
           <SkeletonView skeleton={skeleton} />
         ) : null}
@@ -187,6 +251,15 @@ export function ScriptAgentTab({ project }: { project: Project }) {
           <Empty hint="需先生成故事骨架" />
         ) : episodes.length === 0 && !planRunning ? (
           <div style={{ padding: 16 }}>
+            {stale.stale && (
+              <div style={{
+                padding: "10px 14px", marginBottom: 14, borderRadius: 8,
+                background: "#fef3c7", border: "1px solid #fcd34d",
+                fontSize: 12, color: "#92400e",
+              }}>
+                ⚠ 骨架基于较少原料生成 · 建议先重新生成骨架,再分集,效果更好
+              </div>
+            )}
             <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 auto" }}>
                 <label className="nc-label">本次规划集数</label>
@@ -210,10 +283,7 @@ export function ScriptAgentTab({ project }: { project: Project }) {
             {planError && <div style={{ fontSize: 12, color: "#b91c1c" }}>失败: {planError}</div>}
           </div>
         ) : planRunning ? (
-          <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)" }}>
-            <div style={{ marginBottom: 6, fontSize: 18 }}>⏳</div>
-            正在做分集决策… (通常 30-90 秒,集数越多越慢)
-          </div>
+          <RunningState label="正在做分集决策… (通常 30-90 秒,集数越多越慢)" />
         ) : (
           <EpisodesGrid episodes={episodes} project={project} />
         )}
@@ -223,7 +293,7 @@ export function ScriptAgentTab({ project }: { project: Project }) {
         <div className="nc-callout" style={{ marginTop: 24 }}>
           <span className="nc-callout-kicker">下一步</span>
           <h4>分集就位 · 去「🎬 剧本」扩写每集</h4>
-          <p>{episodes.length} 集已生成 blueprint (集名/梗概/钩子/节拍)。下一步可以在剧本 tab 让 AI 把每集扩写成完整对白脚本。</p>
+          <p>{episodes.length} 集已生成 blueprint。下一步可以在剧本 tab 让 AI 把每集扩写成完整对白脚本。</p>
           <button
             className="nc-btn nc-btn-primary"
             style={{ marginTop: 10 }}
@@ -236,6 +306,67 @@ export function ScriptAgentTab({ project }: { project: Project }) {
 
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
     </>
+  );
+}
+
+function SkeletonPreflight({
+  coverage, wordCount, targetWords, chaptersWithEvents, eventCount,
+  llmReady, onRun, onGoImport, error,
+}: {
+  coverage: number; wordCount: number; targetWords: number;
+  chaptersWithEvents: number; eventCount: number;
+  llmReady: boolean; onRun: () => void; onGoImport: () => void; error: string | null;
+}) {
+  const cov = coverageLabel(coverage);
+  const isLow = coverage < 0.6;
+  const remain = Math.max(0, targetWords - wordCount);
+  return (
+    <div style={{ padding: 18 }}>
+      {isLow && (
+        <div style={{
+          background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10,
+          padding: "12px 16px", marginBottom: 16,
+        }}>
+          <div style={{ fontWeight: 600, color: "#92400e", marginBottom: 4, fontSize: 13 }}>
+            ⚠ 当前原料覆盖率仅 {Math.round(coverage * 100)}% (推荐 ≥ 60%)
+          </div>
+          <div style={{ fontSize: 12, color: "#92400e", lineHeight: 1.7 }}>
+            基于不足的原料生成骨架可能:三幕分布不准 / 主要人物可能遗漏 / 改编原则只能基于已知部分。
+            <br />
+            建议:<strong>先补足材料再生成最终骨架</strong> (推荐) ,
+            或者<strong>先跑一版草稿骨架试试结构</strong> ,
+            后续追加章节后再「重新生成」(骨架不会锁死,可随时重新生成)。
+          </div>
+          <div style={{ fontSize: 12, color: "#92400e", marginTop: 6 }}>
+            还需 ~<strong>{remain.toLocaleString()}</strong> 字达到推荐覆盖率
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <button className="nc-btn nc-btn-primary" onClick={onRun} disabled={!llmReady}>
+          ▶ {isLow ? "先跑一版草稿骨架" : "运行"} (基于 {chaptersWithEvents} 章 · {eventCount} 事件)
+        </button>
+        {isLow && (
+          <button className="nc-btn nc-btn-ghost" onClick={onGoImport}>
+            去「小说」补充材料 →
+          </button>
+        )}
+        <span className="nc-pill" style={{ background: cov.color + "22", color: cov.color, marginLeft: "auto" }}>
+          {cov.label}
+        </span>
+      </div>
+      {error && <div style={{ marginTop: 12, fontSize: 12, color: "#b91c1c" }}>失败: {error}</div>}
+    </div>
+  );
+}
+
+function RunningState({ label }: { label: string }) {
+  return (
+    <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)" }}>
+      <div style={{ marginBottom: 6, fontSize: 18 }}>⏳</div>
+      {label}
+    </div>
   );
 }
 
@@ -275,8 +406,25 @@ function SkeletonView({ skeleton }: { skeleton: StorySkeleton }) {
       <div style={{ fontSize: 13, lineHeight: 1.7, color: "var(--text-strong)" }}>{children}</div>
     </div>
   );
+  const cov = coverageLabel(skeleton.basedOn?.coverage);
   return (
     <div>
+      {skeleton.basedOn && (
+        <div style={{
+          padding: "10px 18px",
+          background: cov.color + "10",
+          fontSize: 12,
+          color: "var(--text-muted)",
+          borderBottom: "1px solid #f4f2ed",
+          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+        }}>
+          <span style={{ color: cov.color, fontWeight: 600 }}>{cov.label}</span>
+          <span>·</span>
+          <span>基于 {skeleton.basedOn.chapterCount} 章 / {skeleton.basedOn.wordCount.toLocaleString()} 字 / {skeleton.basedOn.eventCount} 事件</span>
+          <span>·</span>
+          <span>目标 {skeleton.basedOn.targetEpisodes} 集</span>
+        </div>
+      )}
       <Field label="一句话故事">
         <strong style={{ fontSize: 15 }}>{skeleton.oneLiner}</strong>
       </Field>
