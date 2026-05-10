@@ -196,6 +196,32 @@ export function AssetsTab({ project }: { project: Project }) {
     (window as any).__nc_proposed = proposed;
   };
 
+  const onClearPrompts = () => {
+    const all = listAssets(project.id);
+    const withPrompt = all.filter(a => a.prompt);
+    if (withPrompt.length === 0) { alert("当前没有任何提示词可清"); return; }
+    if (!confirm(`清空全部 ${withPrompt.length} 个资产的提示词?\n\n图片(${all.filter(a => a.previewUrl).length} 张)不会动。\n\n这个操作不可恢复。`)) return;
+    for (const a of all) {
+      if (a.prompt || a.promptStatus !== "idle" || a.promptError) {
+        upsertAsset({ ...a, prompt: undefined, promptStatus: "idle", promptError: undefined });
+      }
+    }
+    setAssetsState(listAssets(project.id));
+  };
+
+  const onClearImages = () => {
+    const all = listAssets(project.id);
+    const withImage = all.filter(a => a.previewUrl);
+    if (withImage.length === 0) { alert("当前没有任何已生成的图片"); return; }
+    if (!confirm(`清空全部 ${withImage.length} 张已生成的图片?\n\n提示词不会动。\n\n这个操作不可恢复。`)) return;
+    for (const a of all) {
+      if (a.previewUrl || a.imageStatus !== "idle" || a.imageError) {
+        upsertAsset({ ...a, previewUrl: undefined, imageStatus: "idle", imageError: undefined });
+      }
+    }
+    setAssetsState(listAssets(project.id));
+  };
+
   const proposedAssets = useMemo(
     () => skeleton ? computeProposedAssets(project.id, skeleton, scripts, assets) : { chars: [], scenes: [] },
     [skeleton, scripts, assets, project.id],
@@ -211,7 +237,32 @@ export function AssetsTab({ project }: { project: Project }) {
             <ProjectImagingBadge project={project} onChange={(p) => { /* re-renders via parent state */ window.location.reload(); }} />
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <details style={{ position: "relative" }}>
+            <summary style={{ listStyle: "none", cursor: "pointer" }}>
+              <span className="nc-btn nc-btn-ghost" style={{ pointerEvents: "none" }}>⋯ 批量清理</span>
+            </summary>
+            <div style={{
+              position: "absolute", right: 0, top: "calc(100% + 4px)",
+              background: "#fff", border: "1px solid #ebe7df", borderRadius: 8,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.08)", padding: 4, zIndex: 10, minWidth: 180,
+            }}>
+              <button
+                className="nc-btn nc-btn-ghost"
+                style={{ width: "100%", justifyContent: "flex-start", borderColor: "transparent" }}
+                onClick={(e) => { (e.currentTarget.closest("details") as HTMLDetailsElement).open = false; onClearPrompts(); }}
+              >
+                🗑 清空所有提示词
+              </button>
+              <button
+                className="nc-btn nc-btn-ghost"
+                style={{ width: "100%", justifyContent: "flex-start", borderColor: "transparent" }}
+                onClick={(e) => { (e.currentTarget.closest("details") as HTMLDetailsElement).open = false; onClearImages(); }}
+              >
+                🖼 清空所有图片
+              </button>
+            </div>
+          </details>
           <button className="nc-btn nc-btn-ghost" onClick={onSmartImport}>
             🤖 智能识别
             {(proposedAssets.chars.length + proposedAssets.scenes.length > 0) && (
