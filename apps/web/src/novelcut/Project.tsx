@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getProject } from "./store";
+import { getProject, hasSeenWelcome } from "./store";
 import type { Project as ProjectT } from "./types";
 import { NovelTab } from "./pages/Novel";
 import { ScriptAgentTab } from "./pages/ScriptAgent";
@@ -7,6 +7,8 @@ import { ScriptsTab } from "./pages/Scripts";
 import { AssetsTab } from "./pages/Assets";
 import { StoryboardTab } from "./pages/Storyboard";
 import { TasksTab } from "./pages/Tasks";
+import { PipelineStepper } from "./PipelineStepper";
+import { WelcomeTour } from "./WelcomeTour";
 
 const TABS: { id: string; ico: string; label: string }[] = [
   { id: "novel",      ico: "📕", label: "小说" },
@@ -19,9 +21,13 @@ const TABS: { id: string; ico: string; label: string }[] = [
 
 export function Project({ projectId, tab }: { projectId: string; tab: string }) {
   const [project, setProject] = useState<ProjectT | undefined>(() => getProject(projectId));
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     setProject(getProject(projectId));
+    if (typeof window !== "undefined" && !hasSeenWelcome()) {
+      setShowWelcome(true);
+    }
   }, [projectId]);
 
   if (!project) {
@@ -54,6 +60,7 @@ export function Project({ projectId, tab }: { projectId: string; tab: string }) 
         ))}
       </nav>
       <div className="nc-page">
+        <PipelineStepper project={project} currentTab={tab} />
         {tab === "novel"      && <NovelTab project={project} />}
         {tab === "agent"      && <ScriptAgentTab project={project} />}
         {tab === "scripts"    && <ScriptsTab project={project} />}
@@ -61,6 +68,7 @@ export function Project({ projectId, tab }: { projectId: string; tab: string }) 
         {tab === "storyboard" && <StoryboardTab project={project} />}
         {tab === "tasks"      && <TasksTab project={project} />}
       </div>
+      {showWelcome && <WelcomeTour project={project} onClose={() => setShowWelcome(false)} />}
     </>
   );
 }

@@ -1,7 +1,4 @@
-/** NovelCut local persistence — localStorage only for MVP.
- *  Daemon-backed persistence is a future migration; the shape here mirrors
- *  what the daemon SQLite schema will look like.
- */
+/** NovelCut local persistence — localStorage only for MVP. */
 import type { Asset, Chapter, Episode, Project, TaskRow } from "./types";
 
 const NS = "novelcut:v1";
@@ -11,9 +8,7 @@ function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
     return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+  } catch { return fallback; }
 }
 function writeJson<T>(key: string, value: T) {
   if (typeof window === "undefined") return;
@@ -25,12 +20,8 @@ export function genId(prefix = "id"): string {
 }
 
 // ----- Projects -----
-export function listProjects(): Project[] {
-  return readJson<Project[]>(k("projects"), []);
-}
-export function getProject(id: string): Project | undefined {
-  return listProjects().find((p) => p.id === id);
-}
+export function listProjects(): Project[] { return readJson<Project[]>(k("projects"), []); }
+export function getProject(id: string): Project | undefined { return listProjects().find((p) => p.id === id); }
 export function upsertProject(p: Project): void {
   const all = listProjects().filter((x) => x.id !== p.id);
   all.unshift(p);
@@ -51,27 +42,36 @@ export function listChapters(projectId: string): Chapter[] {
 export function setChapters(projectId: string, chapters: Chapter[]): void {
   writeJson(k(`chapters:${projectId}`), chapters);
 }
+/** Append new chapters preserving existing ones; reindexes. */
+export function appendChapters(projectId: string, parts: { title: string; body: string }[]): Chapter[] {
+  const cur = listChapters(projectId);
+  const startIdx = cur.length;
+  const next: Chapter[] = [
+    ...cur,
+    ...parts.map((p, i) => ({
+      id: genId("ch"),
+      projectId,
+      index: startIdx + i + 1,
+      title: p.title,
+      body: p.body,
+      eventsStatus: "idle" as const,
+    })),
+  ];
+  setChapters(projectId, next);
+  return next;
+}
 
 // ----- Assets -----
-export function listAssets(projectId: string): Asset[] {
-  return readJson<Asset[]>(k(`assets:${projectId}`), []);
-}
-export function setAssets(projectId: string, assets: Asset[]): void {
-  writeJson(k(`assets:${projectId}`), assets);
-}
+export function listAssets(projectId: string): Asset[] { return readJson<Asset[]>(k(`assets:${projectId}`), []); }
+export function setAssets(projectId: string, assets: Asset[]): void { writeJson(k(`assets:${projectId}`), assets); }
 
 // ----- Episodes -----
-export function listEpisodes(projectId: string): Episode[] {
-  return readJson<Episode[]>(k(`episodes:${projectId}`), []);
-}
-export function setEpisodes(projectId: string, episodes: Episode[]): void {
-  writeJson(k(`episodes:${projectId}`), episodes);
-}
+export function listEpisodes(projectId: string): Episode[] { return readJson<Episode[]>(k(`episodes:${projectId}`), []); }
+export function setEpisodes(projectId: string, episodes: Episode[]): void { writeJson(k(`episodes:${projectId}`), episodes); }
 
 // ----- Tasks -----
 export function listTasks(projectId?: string): TaskRow[] {
   if (projectId) return readJson<TaskRow[]>(k(`tasks:${projectId}`), []);
-  // global view across projects — concat
   return listProjects().flatMap((p) => readJson<TaskRow[]>(k(`tasks:${p.id}`), []));
 }
 export function appendTask(t: TaskRow): void {
@@ -80,16 +80,33 @@ export function appendTask(t: TaskRow): void {
   writeJson(k(`tasks:${t.projectId}`), cur);
 }
 
-// ----- Naive chapter splitter — splits on common Chinese chapter markers -----
+// ----- Welcome state -----
+export function hasSeenWelcome(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(k("welcome-seen")) === "1";
+}
+export function markWelcomeSeen(): void {
+  window.localStorage.setItem(k("welcome-seen"), "1");
+}
+
+// ----- Chapter splitting -----
 const CHAPTER_REGEX = /^(?:第[一二三四五六七八九十百千万0-9０-９]+[章回节卷]|Chapter\s+\d+|CHAPTER\s+\d+|序章|楔子|尾声|后记)/i;
 
-export function splitChapters(text: string): { title: string; body: string }[] {
+export interface SplitResult {
+  parts: { title: string; body: string }[];
+  /** true if we found explicit markers, false if we had to auto-fallback */
+  hadMarkers: boolean;
+}
+
+export function splitChapters(text: string): SplitResult {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const chunks: { title: string; body: string[] }[] = [];
   let cur: { title: string; body: string[] } | null = null;
+  let foundMarker = false;
   for (const line of lines) {
     const trimmed = line.trim();
     if (CHAPTER_REGEX.test(trimmed)) {
+      foundMarker = true;
       if (cur) chunks.push(cur);
       cur = { title: trimmed.slice(0, 50), body: [] };
     } else if (cur) {
@@ -102,5 +119,31 @@ export function splitChapters(text: string): { title: string; body: string }[] {
   if (chunks.length === 0 && text.trim()) {
     chunks.push({ title: "全文", body: text.split("\n") });
   }
-  return chunks.map((c) => ({ title: c.title, body: c.body.join("\n").trim() }));
+  return {
+    parts: chunks.map((c) => ({ title: c.title, body: c.body.join("\n").trim() })),
+    hadMarkers: foundMarker,
+  };
+}
+
+/** Auto-split a single block of text into ~targetCharsPerChapter chunks
+ *  by paragraph boundary. Used when no chapter markers exist. */
+export function autoSplitByLength(text: string, targetCharsPerChapter = 3000): { title: string; body: string }[] {
+  const paragraphs = text.replace(/\r\n/g, "\n").split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  if (paragraphs.length === 0) return [];
+  const out: { title: string; body: string }[] = [];
+  let buffer: string[] = [];
+  let bufLen = 0;
+  for (const p of paragraphs) {
+    buffer.push(p);
+    bufLen += p.length;
+    if (bufLen >= targetCharsPerChapter) {
+      out.push({ title: `第 ${out.length + 1} 段`, body: buffer.join("\n\n") });
+      buffer = [];
+      bufLen = 0;
+    }
+  }
+  if (buffer.length) {
+    out.push({ title: `第 ${out.length + 1} 段`, body: buffer.join("\n\n") });
+  }
+  return out;
 }
