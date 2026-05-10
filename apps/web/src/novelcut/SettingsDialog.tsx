@@ -140,7 +140,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 14, lineHeight: 1.5 }}>
-          API Key 仅保存在浏览器 localStorage,经同源 Next.js 路由 <code>/api/llm/chat</code> 转发到供应商,不会发到第三方。
+          API Key 仅保存在浏览器 localStorage,经同源 Next.js 路由 <code>/nc/llm/chat</code> 转发到供应商,不会发到第三方。
         </div>
       </div>
     </div>

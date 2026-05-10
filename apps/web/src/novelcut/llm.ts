@@ -71,7 +71,7 @@ export class LLMError extends Error {
 }
 
 export async function chat(cfg: LLMConfig, opts: ChatOptions): Promise<ChatResult> {
-  const resp = await fetch("/api/llm/chat", {
+  const resp = await fetch("/nc/llm/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
