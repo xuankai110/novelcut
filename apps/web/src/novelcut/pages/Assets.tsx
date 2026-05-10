@@ -20,6 +20,14 @@ const TABS: { id: AssetKind; label: string; ico: string; hint: string }[] = [
 export function AssetsTab({ project }: { project: Project }) {
   const [assets, setAssetsState] = useState<Asset[]>(() => listAssets(project.id));
   const [kind, setKind] = useState<AssetKind>("char");
+  const [gridSize, setGridSize] = useState<"compact" | "comfy">(() => {
+    if (typeof window === "undefined") return "compact";
+    return (window.localStorage.getItem("novelcut:v1:asset-grid-size") as "compact" | "comfy") || "compact";
+  });
+  const updateGridSize = (s: "compact" | "comfy") => {
+    setGridSize(s);
+    if (typeof window !== "undefined") window.localStorage.setItem("novelcut:v1:asset-grid-size", s);
+  };
   const [showSettings, setShowSettings] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showDrawer, setShowDrawer] = useState<Asset | null>(null);
@@ -327,13 +335,37 @@ export function AssetsTab({ project }: { project: Project }) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 4, marginBottom: 18, borderBottom: "1px solid #ebe7df" }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 18, borderBottom: "1px solid #ebe7df", alignItems: "center" }}>
         {TABS.map((t) => (
           <button key={t.id} className="nc-tab" aria-selected={kind === t.id} onClick={() => setKind(t.id)}>
             <span className="ico">{t.ico}</span> {t.label}
             <span style={{ marginLeft: 4, fontSize: 11, color: "var(--text-faint)" }}>{counts[t.id]}</span>
           </button>
         ))}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 2, paddingBottom: 6 }}>
+          <button
+            className="nc-btn nc-btn-ghost"
+            style={{
+              padding: "4px 10px", fontSize: 12,
+              borderColor: gridSize === "compact" ? "var(--nc-cyan)" : "#e5e1d8",
+              color: gridSize === "compact" ? "var(--nc-cyan-strong)" : undefined,
+              background: gridSize === "compact" ? "var(--nc-cyan-tint)" : "#fff",
+            }}
+            onClick={() => updateGridSize("compact")}
+            title="紧凑视图 — 一行多张缩略图"
+          >⊞ 紧凑</button>
+          <button
+            className="nc-btn nc-btn-ghost"
+            style={{
+              padding: "4px 10px", fontSize: 12,
+              borderColor: gridSize === "comfy" ? "var(--nc-cyan)" : "#e5e1d8",
+              color: gridSize === "comfy" ? "var(--nc-cyan-strong)" : undefined,
+              background: gridSize === "comfy" ? "var(--nc-cyan-tint)" : "#fff",
+            }}
+            onClick={() => updateGridSize("comfy")}
+            title="大图视图 — 一行 2 张,看清细节"
+          >▢ 大图</button>
+        </div>
       </div>
 
       {batchRunning && batchProgress && (
@@ -370,7 +402,7 @@ export function AssetsTab({ project }: { project: Project }) {
           </div>
         </div>
       ) : (
-        <div className="nc-asset-grid">
+        <div className={`nc-asset-grid nc-asset-grid-${gridSize}`}>
           {filtered.map((a) => (
             <AssetCard
               key={a.id} asset={a}
@@ -603,20 +635,31 @@ function AssetDrawer({ asset, onClose, onEdit, onDelete, onGen }: {
 }) {
   return (
     <div className="nc-modal-backdrop" onClick={onClose}>
-      <div className="nc-modal" style={{ maxWidth: 720 }} onClick={(e) => e.stopPropagation()}>
+      <div className="nc-modal nc-asset-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="nc-modal-head">
           <div>
             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{kindLabel(asset.kind)}</div>
-            <div className="nc-modal-title">{asset.name}</div>
+            <div className="nc-modal-title" style={{ fontSize: 22 }}>{asset.name}</div>
             {asset.role && <div className="nc-page-sub">{asset.role}</div>}
           </div>
           <button className="nc-modal-close" onClick={onClose}>×</button>
         </div>
 
         {asset.previewUrl ? (
-          <img src={asset.previewUrl} alt={asset.name} style={{ width: "100%", maxHeight: 480, objectFit: "contain", borderRadius: 8, background: "#f4f2ed", marginBottom: 14 }} />
+          <a href={asset.previewUrl} target="_blank" rel="noreferrer" title="点击在新标签页查看原图">
+            <img src={asset.previewUrl} alt={asset.name}
+              style={{
+                width: "100%",
+                maxHeight: "min(72vh, 800px)",
+                objectFit: "contain",
+                borderRadius: 8,
+                background: "#f4f2ed",
+                marginBottom: 14,
+                cursor: "zoom-in",
+              }} />
+          </a>
         ) : (
-          <div style={{ height: 200, background: "#f4f2ed", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", marginBottom: 14 }}>
+          <div style={{ height: 320, background: "#f4f2ed", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", marginBottom: 14 }}>
             未出图
           </div>
         )}

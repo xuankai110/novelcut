@@ -700,8 +700,14 @@
 /* ============ Assets ============ */
 .nc-asset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
+}
+.nc-asset-grid-compact {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.nc-asset-grid-comfy {
+  grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+  gap: 20px;
 }
 .nc-asset-card {
   background: #fff;
@@ -714,6 +720,7 @@
   flex-direction: column;
   gap: 8px;
 }
+.nc-asset-grid-comfy .nc-asset-card { padding: 14px; gap: 10px; }
 .nc-asset-card:hover {
   border-color: var(--nc-cyan-soft);
   box-shadow: 0 4px 16px rgba(14, 165, 184, 0.08);
@@ -721,7 +728,7 @@
 }
 .nc-asset-thumb {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 16 / 9;
   background: #f4f2ed;
   border-radius: 8px;
   overflow: hidden;
@@ -832,4 +839,13 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+}
+
+
+/* ===== Asset detail drawer (modal) ===== */
+.nc-asset-drawer {
+  max-width: min(1180px, 96vw) !important;
+  width: 96vw;
+  max-height: 92vh;
+  overflow-y: auto;
 }
