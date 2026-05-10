@@ -1,5 +1,5 @@
 /** NovelCut local persistence — localStorage only for MVP. */
-import type { Asset, Chapter, Episode, EpisodeScript, Project, StorySkeleton, TaskRow } from "./types";
+import type { Asset, Chapter, Episode, EpisodeScript, Project, Shot, StorySkeleton, TaskRow } from "./types";
 
 const NS = "novelcut:v1";
 const k = (suffix: string) => `${NS}:${suffix}`;
@@ -34,6 +34,7 @@ export function deleteProject(id: string): void {
   writeJson(k(`tasks:${id}`), []);
   writeJson(k(`skeleton:${id}`), null);
   writeJson(k(`scripts:${id}`), {});
+  writeJson(k(`shots:${id}`), []);
 }
 
 export function listChapters(projectId: string): Chapter[] {
@@ -93,6 +94,52 @@ export function deleteScript(projectId: string, episodeId: string): void {
   const map = listScripts(projectId);
   delete map[episodeId];
   writeJson(k(`scripts:${projectId}`), map);
+}
+
+// ----- Shots -----
+export function listShots(projectId: string): Shot[] {
+  return readJson<Shot[]>(k(`shots:${projectId}`), []);
+}
+export function setShots(projectId: string, shots: Shot[]): void {
+  writeJson(k(`shots:${projectId}`), shots);
+}
+export function listShotsByEpisode(projectId: string, episodeId: string): Shot[] {
+  return listShots(projectId).filter(s => s.episodeId === episodeId)
+    .sort((a, b) => {
+      // sort by sceneIndex (string like "1-1") then shotIndex
+      const [aA, aB] = a.sceneIndex.split("-").map(n => parseInt(n, 10));
+      const [bA, bB] = b.sceneIndex.split("-").map(n => parseInt(n, 10));
+      if (aA !== bA) return (aA || 0) - (bA || 0);
+      if (aB !== bB) return (aB || 0) - (bB || 0);
+      return a.shotIndex - b.shotIndex;
+    });
+}
+export function listShotsByScene(projectId: string, episodeId: string, sceneIndex: string): Shot[] {
+  return listShots(projectId)
+    .filter(s => s.episodeId === episodeId && s.sceneIndex === sceneIndex)
+    .sort((a, b) => a.shotIndex - b.shotIndex);
+}
+export function upsertShot(shot: Shot): void {
+  const cur = listShots(shot.projectId);
+  const next = cur.filter(s => s.id !== shot.id);
+  next.push({ ...shot, updatedAt: Date.now() });
+  setShots(shot.projectId, next);
+}
+export function upsertShots(projectId: string, shots: Shot[]): void {
+  if (shots.length === 0) return;
+  const map = new Map<string, Shot>();
+  for (const s of listShots(projectId)) map.set(s.id, s);
+  for (const s of shots) map.set(s.id, { ...s, updatedAt: Date.now() });
+  setShots(projectId, [...map.values()]);
+}
+export function deleteShot(projectId: string, shotId: string): void {
+  setShots(projectId, listShots(projectId).filter(s => s.id !== shotId));
+}
+export function deleteShotsByScene(projectId: string, episodeId: string, sceneIndex: string): void {
+  setShots(projectId, listShots(projectId).filter(s => !(s.episodeId === episodeId && s.sceneIndex === sceneIndex)));
+}
+export function deleteShotsByEpisode(projectId: string, episodeId: string): void {
+  setShots(projectId, listShots(projectId).filter(s => s.episodeId !== episodeId));
 }
 
 export function listTasks(projectId?: string): TaskRow[] {

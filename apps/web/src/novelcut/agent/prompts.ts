@@ -313,3 +313,147 @@ export function buildAssetPromptUser(project: Project, asset: Asset, skeleton: S
 function kindLabel(k: string): string {
   return k === "char" ? "角色" : k === "scene" ? "场景" : k === "prop" ? "道具" : "素材";
 }
+
+
+// =============== Shotlist (per-scene shot decomposition) ===============
+
+export const SHOTLIST_SYSTEM = `你是资深竖屏 9:16 短剧分镜师。给你一场戏 (action + dialogue),你要把它拆成 2-5 个可拍摄的镜头。
+
+竖屏 9:16 短剧拆镜规范:
+- 节奏:每镜 1.5-5 秒,平均 3 秒;1 镜 = 1 个 beat (一句台词或一个动作动作)
+- 开场镜:必须有钩 — 视觉冲击 / 情绪反差 / 悬念,常用 ES/LS 建立空间或 ECU 切人
+- 冲突镜:多用 CU/ECU/OTS — 拉情绪、突出对视、突出小动作
+- 钩结尾镜:单独成镜,留白
+- 长镜 (>4s) 慎用,只在情绪积累时使用
+- 一场 2-3 镜偏紧凑,4-5 镜偏铺陈
+- 信息密度:每镜要么推进剧情,要么揭示性格,要么放大情绪
+
+镜头语言:
+  framing 候选: ECU(极特,眼/唇) / CU(特写,脸) / MCU(中近,胸上) / MS(中景,腰上) / MLS(中远,膝上) / LS(远景,全身) / EWS(大全,场域) / INSERT(空镜,物件) / OTS(过肩)
+  cameraMove 候选: static / dolly_in / dolly_out / pan_left / pan_right / tilt_up / tilt_down / tracking / handheld / crane
+
+每镜对象字段 (严格遵守):
+  shotIndex: 在本场内的镜次 (1 起始,递增)
+  framing: 上面 9 个之一
+  cameraMove: 上面 10 个之一
+  duration: 1.5-5.0 秒,0.5 步进
+  characters: 入镜人物数组,用原文姓名,空场景就空数组
+  action: 这一镜里发生什么 (30-60 字,具体可拍,不写人物外貌细节)
+  dialogue: 如果这镜对应一句台词,{character, line};没有则不写
+  onScreenText: 屏幕字幕 (片名条 / 时间地点字幕 / 紧急插字),没有则不写
+  audioCue: BGM/SFX 提示 (e.g. "BGM: 弦乐紧张") ,没有则不写
+  imagePrompt: 这帧的英文图像 prompt seed (200-400 字符,描述构图/光线/情绪/色调/氛围,不要写人物外貌细节,人物特征会经资产参考自动注入)
+
+输出严格 JSON: { "shots": [{...}, ...] }
+不要 markdown 代码块,不要任何解释文字,只输出 JSON。`;
+
+export interface ShotlistContext {
+  project: Project;
+  skeleton: StorySkeleton | null;
+  episode: Episode;
+  /** the script scene to decompose */
+  scene: {
+    index: string;
+    location: string;
+    timeOfDay: string;
+    characters: string[];
+    actions: string[];
+    dialogue: { character: string; emotion?: string; line: string }[];
+    audioCues?: string[];
+    onScreenText?: string;
+  };
+}
+
+export function buildShotlistUser(ctx: ShotlistContext): string {
+  const { project, skeleton, episode, scene } = ctx;
+  const dialogueDump = scene.dialogue.length > 0
+    ? scene.dialogue.map(d => `${d.character}${d.emotion ? `(${d.emotion})` : ""}: ${d.line}`).join("\n")
+    : "(无对白)";
+  const parts: string[] = [
+    `项目: ${project.name} · ${project.genre} · ${project.tone} · ${project.platform} 竖屏 9:16`,
+    `语言: ${project.language}`,
+    ``,
+  ];
+  if (skeleton) {
+    parts.push(`=== 故事骨架 (供你定调) ===`);
+    parts.push(`一句话故事: ${skeleton.oneLiner}`);
+    if (skeleton.adaptationPrinciples?.length) {
+      parts.push(`改编原则: ${skeleton.adaptationPrinciples.slice(0, 3).join(" / ")}`);
+    }
+    parts.push(``);
+  }
+  parts.push(
+    `=== 集与场 ===`,
+    `EP${String(episode.index).padStart(2, "0")} · 「${episode.title}」`,
+    `场号: ${scene.index} · 地点: ${scene.location} · ${scene.timeOfDay}`,
+    `入场人物: ${scene.characters.join(" / ") || "(无)"}`,
+    ``,
+    `=== 场景动作 ===`,
+    scene.actions.length ? scene.actions.join("\n") : "(无明确动作描述)",
+    ``,
+    `=== 场景台词 ===`,
+    dialogueDump,
+    ``,
+  );
+  if (scene.onScreenText) parts.push(`=== 屏幕字幕 ===`, scene.onScreenText, ``);
+  if (scene.audioCues?.length) parts.push(`=== 音效提示 ===`, scene.audioCues.join("\n"), ``);
+  parts.push(`请把这场拆为 2-5 个镜头,严格按上面输出格式给 JSON。`);
+  return parts.join("\n");
+}
+
+/** Assemble the final image-gen prompt for one shot:
+ *  shot.imagePrompt + framing keywords + camera-move keywords + linked asset prompts (textual fallback for character consistency).
+ */
+export function buildShotImageGenPrompt(args: {
+  shot: { framing: string; cameraMove: string; characters: string[]; action: string; imagePrompt?: string };
+  project: Project;
+  characterAssets: { name: string; prompt?: string }[];
+  sceneAsset?: { prompt?: string };
+}): string {
+  const { shot, project, characterAssets, sceneAsset } = args;
+  const parts: string[] = [];
+  if (shot.imagePrompt) parts.push(shot.imagePrompt);
+
+  for (const charName of shot.characters) {
+    const a = characterAssets.find(c => c.name === charName);
+    if (a?.prompt) {
+      // Drop the layout boilerplate ("character design sheet, 4-view turnaround...")
+      // and pick the descriptive parts only.
+      const descOnly = a.prompt
+        .replace(/character design sheet[^.]*\./gi, "")
+        .replace(/4-view turnaround[^.]*\./gi, "")
+        .replace(/left to right[^.]*\./gi, "")
+        .replace(/neutral grey[^.]*\./gi, "")
+        .replace(/uniform soft lighting[^.]*\./gi, "")
+        .replace(/consistent across all four views[^.]*\./gi, "")
+        .replace(/full body head to toe[^.]*\./gi, "")
+        .replace(/16:9[^.]*\./gi, "")
+        .trim();
+      parts.push(`Character ${charName}: ${descOnly.split(".").slice(0, 6).join(".").trim()}`);
+    }
+  }
+  if (sceneAsset?.prompt) {
+    parts.push(`Setting: ${sceneAsset.prompt.split(".").slice(0, 4).join(".").trim()}`);
+  }
+
+  const framingMap: Record<string, string> = {
+    ECU: "extreme close-up, only eyes or lips visible, intense focus",
+    CU: "close-up, face fills frame, emotional intensity",
+    MCU: "medium close-up, chest up framing, dialogue framing",
+    MS: "medium shot, waist up, interaction framing",
+    MLS: "medium long shot, knees up, relationship framing",
+    LS: "long shot, full body in frame, spatial context",
+    EWS: "extreme wide shot, environment dominates, establishing context",
+    INSERT: "macro detail insert shot, object detail",
+    OTS: "over-the-shoulder shot, subject seen past foreground shoulder",
+  };
+  parts.push(framingMap[shot.framing] || "medium shot");
+
+  if (shot.cameraMove && shot.cameraMove !== "static") {
+    parts.push(`camera ${shot.cameraMove.replace(/_/g, " ")}`);
+  }
+
+  parts.push(`${project.tone}, ${project.genre} short drama mood`);
+  parts.push("vertical 9:16 short drama frame, cinematic lighting, photorealistic, 4K, sharp focus, no text in image, no watermark");
+  return parts.filter(Boolean).join(". ");
+}

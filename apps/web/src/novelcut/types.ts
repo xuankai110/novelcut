@@ -98,6 +98,61 @@ export interface Asset {
   updatedAt?: number;
 }
 
+export type ShotFraming =
+  | "ECU"     // 极特写 (eyes / lips)
+  | "CU"      // 特写 (face)
+  | "MCU"     // 中近景 (chest up)
+  | "MS"      // 中景 (waist up)
+  | "MLS"     // 中远景 (knees up)
+  | "LS"      // 远景 (full body)
+  | "EWS"     // 大全 (environment dominant)
+  | "INSERT"  // 空镜 (object detail)
+  | "OTS";    // 过肩
+
+export type ShotCameraMove =
+  | "static" | "dolly_in" | "dolly_out"
+  | "pan_left" | "pan_right" | "tilt_up" | "tilt_down"
+  | "tracking" | "handheld" | "crane";
+
+export interface Shot {
+  id: string;
+  projectId: string;
+  episodeId: string;
+  episodeIndex: number;
+  /** matches script scene.index (e.g. "1-1") */
+  sceneIndex: string;
+  /** scene location at time of shot generation (denormalized for display) */
+  sceneLocation: string;
+  /** scene timeOfDay */
+  sceneTimeOfDay: string;
+  /** 1-based shot number within the scene */
+  shotIndex: number;
+
+  framing: ShotFraming;
+  cameraMove: ShotCameraMove;
+  duration: number;            // seconds, 1.5-5.0
+
+  characters: string[];
+  action: string;
+  dialogue?: { character: string; line: string };
+  onScreenText?: string;
+  audioCue?: string;
+
+  imagePrompt?: string;
+  imageUrl?: string;           // generated still
+  imageStatus?: "idle" | "running" | "done" | "error";
+  imageError?: string;
+  imageGeneratedAt?: number;
+
+  /** Auto-resolved asset ids (chars / scene / props) — used as conditioning later */
+  associatedAssetIds: string[];
+
+  /** Generation provenance */
+  model?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface TaskRow {
   id: string; projectId: string; kind: string; model?: string;
   description: string; status: "queued" | "running" | "done" | "error";
