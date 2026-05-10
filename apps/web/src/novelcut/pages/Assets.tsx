@@ -592,9 +592,11 @@ function SmartImportDialog({ proposed, onClose, onImport }: {
               {proposed.chars.map((c, i) => (
                 <label key={i} className="nc-import-row">
                   <input type="checkbox" checked={pickedChars.has(i)} onChange={() => toggle(pickedChars, i, setPickedChars)} />
-                  <span className="nc-pill">{c.role ?? "角色"}</span>
-                  <strong>{c.name}</strong>
-                  {c.description && <span className="nc-page-sub" style={{ flex: 1, fontSize: 12 }}>{c.description.slice(0, 80)}</span>}
+                  <span className="nc-pill nc-import-pill">{c.role ?? "角色"}</span>
+                  <div className="nc-import-body">
+                    <div className="nc-import-name">{c.name}</div>
+                    {c.description && <div className="nc-import-desc">{c.description}</div>}
+                  </div>
                 </label>
               ))}
             </div>
@@ -608,9 +610,11 @@ function SmartImportDialog({ proposed, onClose, onImport }: {
               {proposed.scenes.map((s, i) => (
                 <label key={i} className="nc-import-row">
                   <input type="checkbox" checked={pickedScenes.has(i)} onChange={() => toggle(pickedScenes, i, setPickedScenes)} />
-                  <span className="nc-pill nc-pill-warm">场景</span>
-                  <strong>{s.name}</strong>
-                  {s.description && <span className="nc-page-sub" style={{ flex: 1, fontSize: 12 }}>{s.description}</span>}
+                  <span className="nc-pill nc-pill-warm nc-import-pill">场景</span>
+                  <div className="nc-import-body">
+                    <div className="nc-import-name">{s.name}</div>
+                    {s.description && <div className="nc-import-desc">{s.description}</div>}
+                  </div>
                 </label>
               ))}
             </div>
