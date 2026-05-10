@@ -3,7 +3,7 @@
   "version": "0.6.0",
   "packageManager": "pnpm@10.33.2",
   "type": "module",
-  "description": "AI short-drama production platform — novel to script to storyboard to video, in one canvas.",
+  "description": "AI short-drama production platform \u2014 novel to script to storyboard to video, in one canvas.",
   "license": "Apache-2.0",
   "bin": {
     "od": "./apps/daemon/dist/cli.js"
@@ -27,8 +27,8 @@
     "typescript": "^5.6.3"
   },
   "engines": {
-    "node": "~24",
-    "pnpm": ">=10.33.2 <11"
+    "node": ">=22",
+    "pnpm": ">=10"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -57,3 +57,8 @@ specs/change/active
 .envrc
 # Local design assistant context
 .impeccable.md
+node_modules/
+.next/
+dist/
+.od/
+*.log
