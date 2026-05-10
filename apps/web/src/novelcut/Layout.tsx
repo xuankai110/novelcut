@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { getProject } from "./store";
+import { SettingsDialog } from "./SettingsDialog";
+import { loadLLMConfig } from "./llm";
 
 interface Route {
   kind: "home" | "project";
@@ -18,6 +20,9 @@ const TAB_LABELS: Record<string, string> = {
 
 export function Layout({ route, children }: { route: Route; children: ReactNode }) {
   const project = route.kind === "project" && route.id ? getProject(route.id) : undefined;
+  const [showSettings, setShowSettings] = useState(false);
+  const cfg = typeof window !== "undefined" ? loadLLMConfig() : null;
+  const configured = !!cfg?.apiKey;
 
   return (
     <div className="nc-app">
@@ -43,10 +48,25 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
         <div className="nc-topbar-spacer" />
 
         <div className="nc-topbar-actions">
+          <button
+            className="nc-btn"
+            onClick={() => setShowSettings(true)}
+            title={configured ? `已配置 · ${cfg!.provider}` : "未配置大模型"}
+          >
+            <span style={{ fontSize: 13 }}>⚙</span>
+            <span>设置</span>
+            {!configured && (
+              <span style={{
+                width: 7, height: 7, borderRadius: 999,
+                background: "#f59e0b", display: "inline-block", marginLeft: 4,
+              }} />
+            )}
+          </button>
           <a className="nc-btn" href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
         </div>
       </header>
       {children}
+      {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

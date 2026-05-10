@@ -19,24 +19,33 @@ export interface Project {
   id: string;
   name: string;
   genre: Genre;
-  language: string;        // ISO-639-1
+  language: string;
   platform: Platform;
   tone: Tone;
-  episodeCount: number;    // planned
+  episodeCount: number;
   synopsis?: string;
   createdAt: number;
   updatedAt: number;
 }
 
+export interface ChapterEvent {
+  summary: string;
+  characters: string[];
+  locations: string[];
+  beat: number;        // 1-10 within chapter
+  excerpt: string;
+}
+
 export interface Chapter {
   id: string;
   projectId: string;
-  index: number;           // 1-based
+  index: number;
   title: string;
   body: string;
-  /** event extraction status */
   eventsStatus: "idle" | "running" | "done" | "error";
   eventCount?: number;
+  events?: ChapterEvent[];
+  errorMessage?: string;
 }
 
 export interface Asset {
@@ -46,26 +55,27 @@ export interface Asset {
   name: string;
   description?: string;
   prompt?: string;
-  previewUrl?: string;     // generated image url (placeholder for MVP)
+  previewUrl?: string;
   createdAt: number;
 }
 
 export interface Episode {
   id: string;
   projectId: string;
-  index: number;           // 1-based
+  index: number;
   title: string;
-  beats?: string;          // markdown
+  beats?: string;
   status: "draft" | "scripted" | "shotlisted" | "rendered";
 }
 
 export interface TaskRow {
   id: string;
   projectId: string;
-  kind: string;            // e.g. "image.scene", "video.shot", "agent.event-extract"
+  kind: string;
   model?: string;
   description: string;
   status: "queued" | "running" | "done" | "error";
   createdAt: number;
   finishedAt?: number;
+  errorMessage?: string;
 }
