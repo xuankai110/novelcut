@@ -10,7 +10,7 @@ import {
   SKELETON_SYSTEM, buildSkeletonUser,
   EPISODE_PLAN_SYSTEM, buildEpisodePlanUser,
   SCRIPT_SYSTEM, buildScriptUser,
-  ASSET_PROMPT_SYSTEM, buildAssetPromptUser,
+  ASSET_PROMPT_SYSTEMS, buildAssetPromptUser,
 } from "./prompts";
 
 export interface RunSkeletonResult { skeleton: StorySkeleton; raw: string; }
@@ -168,9 +168,10 @@ export async function runAssetPrompt(
   llm: LLMConfig, project: Project, asset: Asset, skeleton: StorySkeleton | null,
   opts: RunAssetPromptOptions = {},
 ): Promise<string> {
+  const systemPrompt = ASSET_PROMPT_SYSTEMS[asset.kind] ?? ASSET_PROMPT_SYSTEMS.media;
   const resp = await chat(llm, {
     messages: [
-      { role: "system", content: ASSET_PROMPT_SYSTEM },
+      { role: "system", content: systemPrompt },
       { role: "user", content: buildAssetPromptUser(project, asset, skeleton) },
     ],
     temperature: 0.6, json: true, signal: opts.signal,
@@ -192,14 +193,16 @@ export async function runAssetImage(
   img: ImageConfig, project: Project, asset: Asset, opts: RunAssetImageOptions = {},
 ): Promise<{ url?: string; b64?: string }> {
   if (!asset.prompt) throw new Error("资产缺少 prompt — 请先生成提示词");
-  const ratio = getVideoRatio(project);
   const quality = getImageQuality(project);
+  // Toonflow-aligned: ALL asset reference images are 16:9 (4-view char sheet,
+  // 2-state prop sheet, establishing scene shot all benefit from wide layout).
+  // Project.videoRatio kicks in later at storyboard/video generation.
+  const ASSET_REF_RATIO = "16:9" as const;
   const useAR = img.useAspectRatio;
-  // Toonflow-aligned: every asset follows project ratio (no per-kind override)
   const result = await imageGenerate(img, {
     prompt: asset.prompt,
-    size: useAR ? undefined : (opts.size ?? ratioToPixelSize(ratio, quality)),
-    aspectRatio: useAR ? (opts.aspectRatio ?? ratio) : undefined,
+    size: useAR ? undefined : (opts.size ?? ratioToPixelSize(ASSET_REF_RATIO, quality)),
+    aspectRatio: useAR ? (opts.aspectRatio ?? ASSET_REF_RATIO) : undefined,
     signal: opts.signal,
   });
   return { url: result.url, b64: result.b64 };

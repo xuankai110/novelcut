@@ -207,7 +207,7 @@ export function AssetsTab({ project }: { project: Project }) {
         <div>
           <h2 className="nc-page-title" style={{ fontSize: 20 }}>资产中心</h2>
           <div className="nc-page-sub" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span>全局复用 · 所有资产/分镜/视频共用项目画幅。</span>
+            <span>全局复用 · 角色四视图 / 道具双状态 / 场景 establishing — 都是 16:9 参考图,供分镜阶段调用。</span>
             <ProjectImagingBadge project={project} onChange={(p) => { /* re-renders via parent state */ window.location.reload(); }} />
           </div>
         </div>
@@ -396,10 +396,13 @@ function ProjectImagingBadge({ project, onChange }: { project: Project; onChange
           background: "var(--nc-cyan-tint)", color: "var(--nc-cyan-strong)",
           border: "1px solid var(--nc-cyan-soft)", cursor: "pointer", padding: "2px 10px",
         }}
-        title="点击修改项目画幅 / 画质"
+        title={`项目画幅 ${ratio} · 画质 ${quality} (用于分镜/视频出图,资产参考图固定 16:9)`}
       >
-        🎞 {ratio} · {quality}
+        🎞 项目 {ratio} · {quality}
       </button>
+      <span className="nc-pill nc-pill-gray" style={{ padding: "2px 10px" }} title="资产参考图(角色4视图/道具双状态/场景establishing shot)固定 16:9 横版,与项目画幅无关">
+        📐 资产 16:9
+      </span>
       {editing && <ProjectImagingDialog project={project} onClose={() => setEditing(false)} onSave={onChange} />}
     </>
   );

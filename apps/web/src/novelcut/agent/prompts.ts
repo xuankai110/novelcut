@@ -154,18 +154,126 @@ export function buildScriptUser(
   return parts.filter(Boolean).join("\n");
 }
 
-// =============== Asset visual prompt ===============
+// =============== Asset visual prompt (Toonflow-style 视觉手册) ===============
 
-export const ASSET_PROMPT_SYSTEM = `你是一位资深短剧美术指导,擅长为短剧角色 / 场景 / 道具写出精准的图像生成提示词 (image-gen prompt)。
+const COMMON_RULES = `通用规则:
+- 用英文写主体提示词 (image gen 模型对英文反应更稳定),少量专有名词可保留中文
+- 严格用项目题材调性: 都市霸总用冷峻光影,玄幻仙侠用空灵雾气,古装宫斗用奢华色调,现代悬疑用冷色调高反差
+- 严禁: NSFW / 品牌词 / 商标 / 文字水印 / 夸张表情 / 卡通风格 (除非项目要求)
+- 必须 photorealistic + cinematic + 4K + sharp focus`;
 
-输出严格 JSON: { "prompt": "..." },不要 markdown,不要解释。
+const CHAR_RULES = `角色四视图标准规范 (这是行业铁律,严格遵守):
 
-提示词写作要求:
-- 用英文(图像模型对英文反应更稳定),除非项目语言不是中文/英文,则用项目语言
-- 描述要 specific:外貌细节、服装、光线、镜头(对人物用 portrait,场景用 establishing shot,道具用 product shot)、风格(photorealistic / cinematic / 4K / shot on Sony A7)
-- 短剧调性:都市霸总用冷峻光影,古装宫斗用奢华色调,玄幻仙侠用空灵雾气
-- 画面统一保持人物在中央构图,简洁背景,便于后续合成
-- 不要写品牌词或广告语;不要写 NSFW;严格人物一致性 (后续每集都会复用)`;
+布局: 同一画面左到右并排 4 个视图
+  视图 1 - 人像特写: 头顶到锁骨完整入画,五官清晰,占面板 60%+
+  视图 2 - 正视图: 全身立像,正面 0°,面对镜头,双臂自然下垂
+  视图 3 - 侧视图: 全身立像,右侧 90°,纯侧面轮廓清晰
+  视图 4 - 后视图: 全身立像,后方 180°,后脑/背部/发尾/脚部清晰
+
+硬约束:
+  R1 背景: 素灰纯色 #B8B8B8 (干净,便于后续合成)
+  R2 画面比例: 16:9 (4 视图横向并排)
+  R3 站姿: 自然站立,双脚平行微分,双臂自然下垂
+  R4 表情: 中性微表情,符合角色气质
+  R5 光线: 均匀柔光,前方主光 + 双侧补光,无硬阴影
+  R6 一致性: 4 视图的肤色/体型/发型/面容/服装完全一致
+  R7 不裁切: 全身立像从头顶到脚底完整入画;特写从头顶到锁骨完整入画
+  R8 头身比: 默认 7 头身 (女 160-170cm / 男 175-185cm),除非角色描述明确异于
+  R9 服装: 基础打底 (女:素色长裙/简洁连衣裙,男:素色衬衫/西装/T恤),保留辨识度,无配饰水印
+
+英文提示词必写关键词 (这些会被图像模型识别为 4-view 标准):
+  "character design sheet, 4-view turnaround,
+   left to right: portrait closeup + front view + side view + back view,
+   neutral grey #B8B8B8 background, uniform soft lighting,
+   consistent across all four views, full body head to toe (no cropping),
+   16:9 wide composition, no text, no watermark"
+
+写提示词时:
+  必须包含: 性别+种族+年龄段 / 脸型 / 眼型 / 体型 / 头身比 / 肤色 / 发色发长 / 服装基础款 / 气质
+  例: "young Chinese woman in her early 20s, oval face with sharp jawline, almond eyes, slim graceful build, 7 heads tall proportion, fair complexion, long straight black hair to waist, simple modern black dress, elegant aloof aura"`;
+
+const SCENE_RULES = `场景设定图规范:
+
+构图: establishing shot,展示空间全貌 + 氛围 + 纵深
+  - 不出现具体人物 (人物在分镜出图阶段叠加)
+  - 关键道具/陈设入画 (与剧情相关的酒杯、手机、桌椅、地标等)
+  - 体现时段 / 内外 / 光线方向
+
+硬约束:
+  R1 画面比例: 16:9 横向 (资产参考图统一 16:9,实际分镜会按项目画幅再裁)
+  R2 时段一致: 严格按描述 (清晨柔光 / 正午高反差 / 黄昏暖色 / 夜晚冷色霓虹)
+  R3 内外区分: 内景注重材质纹理,外景注重天光地景
+  R4 风格匹配: 都市 cinematic / 古风 ornate / 玄幻 ethereal
+  R5 严禁: 文字标志 / 人物 / 品牌
+
+英文提示词必写:
+  "establishing shot of [location], [time of day], [atmosphere],
+   no people, key props visible, cinematic composition,
+   16:9 widescreen, photorealistic, 4K, sharp focus"`;
+
+const PROP_RULES = `道具设定图规范:
+
+布局: 同一画面左右两个状态并排
+  状态 1 (左): 静态独立 — 道具单独陈列,无人物,无环境干扰
+  状态 2 (右): 使用中 / 细节特写 — 体现该道具在剧中如何被使用 (如握在手里的角度、放在桌上的状态、近景特写)
+
+硬约束:
+  R1 画面比例: 16:9 (两状态横向并排)
+  R2 背景: 素灰纯色 #B8B8B8
+  R3 拍摄精度: product shot 级,材质/光泽/纹理/细节清晰
+  R4 严禁: 文字 / 品牌 / Logo (除非该道具本身的设计就有,且必要)
+  R5 比例参考: 如果道具有手柄/可握持部分,状态 2 中明确展示握持手势/场景
+
+英文提示词必写:
+  "product design sheet, 2 states side by side,
+   left: standalone clean studio shot, neutral grey #B8B8B8 background,
+   right: in-use or detail closeup,
+   sharp focus, photorealistic, 4K, 16:9 layout, no text"`;
+
+const MEDIA_RULES = `素材 (封面/海报/字卡) 规范:
+
+布局: 单图,16:9 横向 (资产层统一 16:9)
+  - 主体明确,留白考虑后续叠字幕
+  - 颜色情绪与项目调性一致
+
+硬约束:
+  R1 比例: 16:9
+  R2 风格匹配: 都市/古装/玄幻 各按风格
+  R3 文字: 仅当 description 明确要求时输出文字,否则不出文字`;
+
+export const ASSET_PROMPT_SYSTEMS = {
+  char: `你是短剧美术指导,擅长写「角色四视图设定」的图像生成提示词。
+
+${CHAR_RULES}
+
+${COMMON_RULES}
+
+输出严格 JSON: { "prompt": "..." } — 不要 markdown 代码块,不要任何解释文字,只输出 JSON。`,
+  scene: `你是短剧美术指导,擅长写「场景设定图」的图像生成提示词。
+
+${SCENE_RULES}
+
+${COMMON_RULES}
+
+输出严格 JSON: { "prompt": "..." }`,
+  prop: `你是短剧美术指导,擅长写「道具设定图」的图像生成提示词。
+
+${PROP_RULES}
+
+${COMMON_RULES}
+
+输出严格 JSON: { "prompt": "..." }`,
+  media: `你是短剧美术指导,擅长写「视觉素材」的图像生成提示词。
+
+${MEDIA_RULES}
+
+${COMMON_RULES}
+
+输出严格 JSON: { "prompt": "..." }`,
+} as const;
+
+/** Backwards-compat alias for any older code that imported the old name */
+export const ASSET_PROMPT_SYSTEM = ASSET_PROMPT_SYSTEMS.char;
 
 export function buildAssetPromptUser(project: Project, asset: Asset, skeleton: StorySkeleton | null): string {
   const parts: string[] = [
@@ -184,17 +292,21 @@ export function buildAssetPromptUser(project: Project, asset: Asset, skeleton: S
       if (match) parts.push(`角色弧光: ${match.arc}`);
     }
   }
-  parts.push(
-    ``,
-    asset.kind === "char"
-      ? `请写出这个角色的人物参考图提示词 (full-body or 3/4 portrait, 干净背景便于后续合成,角色特征突出便于跨集复用)。`
-      : asset.kind === "scene"
-        ? `请写出这个场景的取景参考图提示词 (establishing shot, 9:16 vertical, 适合短剧首镜)。`
-        : asset.kind === "prop"
-          ? `请写出这道具的产品级特写提示词 (product shot, 干净背景)。`
-          : `请写出这个素材的图像提示词。`,
-    `输出 JSON: { "prompt": "..." }`,
-  );
+  parts.push(``);
+  if (asset.kind === "char") {
+    parts.push(
+      `请写出此角色的「四视图设定图」提示词,严格遵循上面的角色四视图规范。`,
+      `务必包含: 人像特写 / 正视图 / 侧视图 / 后视图 — 同画面左到右并排,16:9 比例。`,
+      `务必声明: 性别+种族+年龄段 / 脸型 / 体型 / 头身比 / 肤色 / 发色发长 / 基础服装 / 气质。`,
+    );
+  } else if (asset.kind === "scene") {
+    parts.push(`请写出此场景的「establishing shot 设定图」提示词,严格遵循上面的场景规范。`);
+  } else if (asset.kind === "prop") {
+    parts.push(`请写出此道具的「双状态设定图」提示词:左侧独立、右侧使用中。`);
+  } else {
+    parts.push(`请写出此素材的图像生成提示词。`);
+  }
+  parts.push(`输出 JSON: { "prompt": "..." }`);
   return parts.join("\n");
 }
 
