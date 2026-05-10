@@ -24,7 +24,7 @@ interface Props {
   onHide?: () => void;
 }
 
-const COLLAPSED_KEY = 'open-design:pet-rail-collapsed';
+const COLLAPSED_KEY = 'novelcut:pet-rail-collapsed';
 
 function loadCollapsed(): boolean {
   if (typeof window === 'undefined') return false;

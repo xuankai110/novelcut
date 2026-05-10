@@ -17,7 +17,7 @@ interface Props {
   onOpenSettings: () => void;
 }
 
-const STORAGE_KEY = 'open-design:pet-position';
+const STORAGE_KEY = 'novelcut:pet-position';
 
 interface Position {
   // Distances from the right/bottom of the viewport so the overlay

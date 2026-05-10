@@ -15,7 +15,7 @@ import {
   DEFAULT_SUCCESS_SOUND_ID,
 } from '../utils/notifications';
 
-const STORAGE_KEY = 'open-design:config';
+const STORAGE_KEY = 'novelcut:config';
 const CONFIG_MIGRATION_VERSION = 1;
 
 // Hatched out of the box, but tucked away — the user has to go through

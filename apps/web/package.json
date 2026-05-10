@@ -33,6 +33,7 @@
     "@novelcut/platform": "workspace:*",
     "@novelcut/sidecar": "workspace:*",
     "@novelcut/sidecar-proto": "workspace:*",
+    "@swc/helpers": "^0.5.21",
     "next": "^16.2.5",
     "openai": "^6.36.0",
     "react": "^18.3.1",

@@ -55,7 +55,7 @@ const DICTS: Record<Locale, Dict> = {
   'th': th,
 };
 
-const LS_KEY = 'open-design:locale';
+const LS_KEY = 'novelcut:locale';
 
 // First-run default is English. We honor an explicit user pick saved to
 // localStorage but never auto-detect from `navigator.language`, so the
