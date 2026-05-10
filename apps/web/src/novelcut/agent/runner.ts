@@ -5,6 +5,7 @@ import type {
 import {
   chat, extractJson, imageGenerate, type LLMConfig, type ImageConfig,
 } from "../llm";
+import { getVideoRatio, getImageQuality, ratioToPixelSize } from "../projectMeta";
 import {
   SKELETON_SYSTEM, buildSkeletonUser,
   EPISODE_PLAN_SYSTEM, buildEpisodePlanUser,
@@ -191,7 +192,6 @@ export async function runAssetImage(
   img: ImageConfig, project: Project, asset: Asset, opts: RunAssetImageOptions = {},
 ): Promise<{ url?: string; b64?: string }> {
   if (!asset.prompt) throw new Error("资产缺少 prompt — 请先生成提示词");
-  const { getVideoRatio, getImageQuality, ratioToPixelSize } = await import("../projectMeta");
   const ratio = getVideoRatio(project);
   const quality = getImageQuality(project);
   const useAR = img.useAspectRatio;

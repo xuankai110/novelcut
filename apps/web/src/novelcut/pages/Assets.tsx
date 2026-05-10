@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project, Asset, AssetKind, EpisodeScript } from "../types";
 import {
   listAssets, upsertAsset, deleteAsset, genId,
-  getSkeleton, listScripts, appendTask,
+  getSkeleton, listScripts, appendTask, upsertProject,
 } from "../store";
+import { RATIO_OPTIONS, QUALITY_OPTIONS, defaultRatioForPlatform } from "../projectMeta";
+import type { VideoRatio, ImageQuality } from "../types";
 import { loadLLMConfig, loadImageConfig, LLMError } from "../llm";
 import { runAssetPrompt, runAssetImage } from "../agent/runner";
 import { SettingsDialog } from "../SettingsDialog";
@@ -404,10 +406,8 @@ function ProjectImagingBadge({ project, onChange }: { project: Project; onChange
 }
 
 function ProjectImagingDialog({ project, onClose, onSave }: { project: Project; onClose: () => void; onSave: (p: Project) => void }) {
-  const { upsertProject } = require("../store") as typeof import("../store");
-  const { RATIO_OPTIONS, QUALITY_OPTIONS } = require("../projectMeta") as typeof import("../projectMeta");
-  const [ratio, setRatio] = useState(project.videoRatio ?? "9:16");
-  const [quality, setQuality] = useState(project.imageQuality ?? "1K");
+  const [ratio, setRatio] = useState<VideoRatio>(project.videoRatio ?? defaultRatioForPlatform(project.platform));
+  const [quality, setQuality] = useState<ImageQuality>(project.imageQuality ?? "1K");
   return (
     <div className="nc-modal-backdrop" onClick={onClose}>
       <div className="nc-modal" onClick={(e) => e.stopPropagation()}>
@@ -420,14 +420,14 @@ function ProjectImagingDialog({ project, onClose, onSave }: { project: Project; 
         </div>
         <div className="nc-form-row">
           <label className="nc-label">画幅</label>
-          <select className="nc-select" value={ratio} onChange={(e) => setRatio(e.target.value as any)}>
-            {RATIO_OPTIONS.map((o: any) => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
+          <select className="nc-select" value={ratio} onChange={(e) => setRatio(e.target.value as VideoRatio)}>
+            {RATIO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
           </select>
         </div>
         <div className="nc-form-row">
           <label className="nc-label">画质</label>
-          <select className="nc-select" value={quality} onChange={(e) => setQuality(e.target.value as any)}>
-            {QUALITY_OPTIONS.map((o: any) => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
+          <select className="nc-select" value={quality} onChange={(e) => setQuality(e.target.value as ImageQuality)}>
+            {QUALITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>)}
           </select>
         </div>
         <div className="nc-modal-foot">
