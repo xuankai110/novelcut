@@ -12,10 +12,9 @@ export function buildProvenance(project: Project, chapters: Chapter[]): Skeleton
   return {
     chapterIds: usedChapters.map(c => c.id).sort(),
     chapterCount: usedChapters.length,
-    eventCount,
-    wordCount,
+    eventCount, wordCount,
     targetEpisodes: project.episodeCount,
-    coverage: Math.min(2, wordCount / target),  // cap at 2x for sanity
+    coverage: Math.min(2, wordCount / target),
   };
 }
 
@@ -60,31 +59,61 @@ function normAct(a: any, fallbackRange: string) {
   };
 }
 
-export interface RunEpisodePlanResult { blueprints: EpisodeBlueprint[]; raw: string; }
+export interface RunEpisodePlanProgress {
+  done: number; total: number; chunkLabel: string;
+}
+
+export interface RunEpisodePlanOptions {
+  /** how many episodes per LLM call. default 5. */
+  chunkSize?: number;
+  /** progress callback (after each chunk). */
+  onChunk?: (p: RunEpisodePlanProgress) => void;
+  /** abort signal */
+  signal?: AbortSignal;
+}
+
+export interface RunEpisodePlanResult { blueprints: EpisodeBlueprint[]; }
 
 export async function runEpisodePlan(
-  llm: LLMConfig, project: Project, chapters: Chapter[], skeleton: StorySkeleton, episodeCount: number,
+  llm: LLMConfig, project: Project, chapters: Chapter[],
+  skeleton: StorySkeleton, episodeCount: number, opts: RunEpisodePlanOptions = {},
 ): Promise<RunEpisodePlanResult> {
   const used = chapters.filter(c => c.eventsStatus === "done");
-  const resp = await chat(llm, {
-    messages: [
-      { role: "system", content: EPISODE_PLAN_SYSTEM },
-      { role: "user", content: buildEpisodePlanUser(project, used, skeleton, episodeCount) },
-    ],
-    temperature: 0.4, json: true,
-  });
-  const parsed = extractJson<{ episodes?: any[] } | any[]>(resp.content);
-  const list = Array.isArray(parsed) ? parsed : (parsed.episodes ?? []);
-  const blueprints: EpisodeBlueprint[] = list.map((e: any, i: number) => ({
-    index: Number.isFinite(e?.index) ? Number(e.index) : i + 1,
-    title: String(e?.title ?? `第 ${i + 1} 集`),
-    summary: String(e?.summary ?? ""),
-    beats: Array.isArray(e?.beats) ? e.beats.map(String) : [],
-    hookOpen: String(e?.hookOpen ?? ""),
-    hookEnd: String(e?.hookEnd ?? ""),
-    retainsEvents: Array.isArray(e?.retainsEvents) ? e.retainsEvents.map(String) : [],
-    newScenes: Array.isArray(e?.newScenes) ? e.newScenes.map(String) : undefined,
-  }));
-  blueprints.sort((a, b) => a.index - b.index);
-  return { blueprints, raw: resp.content };
+  const chunkSize = Math.max(2, opts.chunkSize ?? 5);
+  const blueprints: EpisodeBlueprint[] = [];
+
+  let cursor = 1;
+  while (cursor <= episodeCount) {
+    if (opts.signal?.aborted) throw new Error("已取消");
+    const end = Math.min(episodeCount, cursor + chunkSize - 1);
+    const chunkLabel = `第 ${cursor}-${end} 集`;
+    opts.onChunk?.({ done: cursor - 1, total: episodeCount, chunkLabel: `生成中: ${chunkLabel}` });
+
+    const resp = await chat(llm, {
+      messages: [
+        { role: "system", content: EPISODE_PLAN_SYSTEM },
+        { role: "user", content: buildEpisodePlanUser(project, used, skeleton, cursor, end, episodeCount, blueprints) },
+      ],
+      temperature: 0.4, json: true, signal: opts.signal,
+    });
+    const parsed = extractJson<{ episodes?: any[] } | any[]>(resp.content);
+    const list = Array.isArray(parsed) ? parsed : (parsed.episodes ?? []);
+    const batch: EpisodeBlueprint[] = list.map((e: any, i: number) => ({
+      index: Number.isFinite(e?.index) ? Number(e.index) : cursor + i,
+      title: String(e?.title ?? `第 ${cursor + i} 集`),
+      summary: String(e?.summary ?? ""),
+      beats: Array.isArray(e?.beats) ? e.beats.map(String) : [],
+      hookOpen: String(e?.hookOpen ?? ""),
+      hookEnd: String(e?.hookEnd ?? ""),
+      retainsEvents: Array.isArray(e?.retainsEvents) ? e.retainsEvents.map(String) : [],
+      newScenes: Array.isArray(e?.newScenes) ? e.newScenes.map(String) : undefined,
+    }));
+    // accept only items inside the requested range, then append
+    const filtered = batch.filter(b => b.index >= cursor && b.index <= end);
+    blueprints.push(...filtered);
+    blueprints.sort((a, b) => a.index - b.index);
+    opts.onChunk?.({ done: Math.min(episodeCount, end), total: episodeCount, chunkLabel: `${chunkLabel} 完成` });
+    cursor = end + 1;
+  }
+  return { blueprints };
 }

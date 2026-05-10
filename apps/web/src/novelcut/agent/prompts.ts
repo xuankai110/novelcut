@@ -1,8 +1,6 @@
-/** Prompts for 编剧 Agent — skeleton + episode plan. */
-import type { Chapter, Project, StorySkeleton } from "../types";
+/** Prompts for 编剧 Agent — skeleton + episode plan (full or chunked). */
+import type { Chapter, EpisodeBlueprint, Project, StorySkeleton } from "../types";
 
-/** Compress all events from chapters into a compact textual form for the model.
- *  Format keeps chapter context + beat + characters + locations, drops excerpts to save tokens. */
 export function compressEvents(chapters: Chapter[]): string {
   const lines: string[] = [];
   let n = 0;
@@ -22,11 +20,11 @@ export const SKELETON_SYSTEM = `你是一位资深短剧编剧。给你一部小
 
 输出严格 JSON,字段:
 - oneLiner: 一句话故事 (20-40 字)
-- storyCore: 故事内核 (50-100 字,讲清主角的核心冲突/成长/价值观)
-- hiddenPlot: 隐线 (30-80 字,贯穿全剧的暗线/反转点/悬念)
-- characterCores: 主要人物数组,每人 { name, role, arc },role 用"女主/男主/反派/重要配角"等,arc 描述弧光 (40-80 字)
-- threeActs: { act1, act2, act3 },每幕 { range, summary, keyBeats },range 形如 "1-20集",summary 50-80 字,keyBeats 3-5 条
-- adaptationPrinciples: 改编原则数组 3-5 条,如「强化爽点节奏」「砍掉旁支线」「每集必有钩子」等具体方向
+- storyCore: 故事内核 (50-100 字)
+- hiddenPlot: 隐线 (30-80 字)
+- characterCores: 主要人物数组,每人 { name, role, arc },role 用"女主/男主/反派/重要配角"等
+- threeActs: { act1, act2, act3 },每幕 { range, summary, keyBeats },range 形如 "1-20集"
+- adaptationPrinciples: 改编原则数组 3-5 条
 
 只输出 JSON,不要 markdown 代码块,不要任何额外文字。`;
 
@@ -46,26 +44,31 @@ export function buildSkeletonUser(project: Project, chapters: Chapter[]): string
   ].filter(Boolean).join("\n");
 }
 
-export const EPISODE_PLAN_SYSTEM = `你是一位资深短剧编剧。基于用户给的「故事骨架」和「事件列表」,把内容分配到指定数量的集数。
+export const EPISODE_PLAN_SYSTEM = `你是一位资深短剧编剧。基于「故事骨架」和「事件列表」,把内容分配到指定的集数区间。
 
 每集对象字段:
-- index: 集号 (1 起始,递增)
+- index: 集号 (1 起始,严格按用户要求的区间生成)
 - title: 集名 (8-15 字,带钩子感,不要写"第N集")
-- summary: 本集梗概 (80-120 字,讲清这一集发生了什么、谁做了什么、走向哪里)
-- beats: 关键节拍 3-5 条 (每条 10-25 字)
-- hookOpen: 开场钩子 (10-20 字,本集开头第一帧的强吸引点)
-- hookEnd: 结尾留白 (10-20 字,把观众拉到下一集的悬念)
-- retainsEvents: 字符串数组,从输入事件列表里选这一集复用了哪些事件,直接用事件 summary
-- newScenes: 字符串数组(可选),编剧新增的场景或情节,每条一句话
+- summary: 本集梗概 (80-120 字)
+- beats: 关键节拍 3-5 条
+- hookOpen: 开场钩子 (10-20 字)
+- hookEnd: 结尾留白 (10-20 字)
+- retainsEvents: 数组,从输入事件列表里选这一集复用的事件 summary
+- newScenes: 数组(可选),编剧新增的场景
 
 输出严格 JSON: { "episodes": [...] },不要 markdown,不要解释。`;
 
+/** Build user prompt for a *chunk* of episodes (rangeStart..rangeEnd inclusive).
+ *  When prevEpisodes is non-empty, includes them as anchor context. */
 export function buildEpisodePlanUser(
-  project: Project, chapters: Chapter[], skeleton: StorySkeleton, episodeCount: number,
+  project: Project, chapters: Chapter[], skeleton: StorySkeleton,
+  rangeStart: number, rangeEnd: number, totalEpisodes: number,
+  prevEpisodes: EpisodeBlueprint[] = [],
 ): string {
-  return [
+  const parts: string[] = [
     `项目: ${project.name} · ${project.genre} · ${project.tone} · ${project.platform} 竖屏 9:16`,
-    `本次规划集数: ${episodeCount} 集 × ~30 秒`,
+    `本剧总集数: ${totalEpisodes} 集 × ~30 秒`,
+    `本次只生成第 ${rangeStart} 集到第 ${rangeEnd} 集 (共 ${rangeEnd - rangeStart + 1} 集),其余集次不要输出。`,
     ``,
     `=== 故事骨架 ===`,
     JSON.stringify(skeleton, null, 2),
@@ -73,8 +76,19 @@ export function buildEpisodePlanUser(
     `=== 章节事件列表 ===`,
     compressEvents(chapters),
     ``,
-    `请把以上事件分配到 ${episodeCount} 集中,每集要么复用原著事件、要么编剧新增场景填补节奏。`,
+  ];
+  if (prevEpisodes.length > 0) {
+    parts.push(`=== 已生成的前序集次 (供你保持连贯,不要重复输出) ===`);
+    for (const ep of prevEpisodes) {
+      parts.push(`EP${String(ep.index).padStart(2, "0")} 「${ep.title}」 ${ep.summary} | 钩尾: ${ep.hookEnd}`);
+    }
+    parts.push(``);
+  }
+  parts.push(
+    `请生成第 ${rangeStart} 集到第 ${rangeEnd} 集的 blueprint,index 字段必须是这个区间的数字。`,
     `集与集之间情绪曲线连贯,每集结尾必须有 hookEnd。`,
     `平均每集承载 2-4 个原著事件或新场景。`,
-  ].join("\n");
+    `输出严格 JSON: { "episodes": [{...}, {...}, ...] }`,
+  );
+  return parts.join("\n");
 }

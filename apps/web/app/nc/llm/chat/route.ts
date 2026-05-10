@@ -1,25 +1,13 @@
 /**
- * Server-side proxy that forwards OpenAI-compatible chat-completions calls
- * to the user-configured LLM endpoint. Same-origin from the SPA so we sidestep
- * vendor CORS gymnastics, and the API key never lives in URLs/logs visible
- * cross-origin.
- *
- * Request body:
- *   {
- *     baseUrl: string,       // e.g. "https://api.deepseek.com"
- *     apiKey: string,
- *     model: string,
- *     messages: ChatMessage[],
- *     temperature?: number,
- *     responseFormat?: "json_object" | undefined
- *   }
- *
- * Response: pass-through of provider response (status code preserved).
+ * Server-side proxy that forwards OpenAI-compatible chat-completions calls.
+ * Same-origin so the SPA sidesteps vendor CORS, and the API key never leaves
+ * this process unencrypted across the wire.
  */
 import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;  // 5 min — Next.js route execution cap
 
 interface Body {
   baseUrl?: string;
@@ -32,19 +20,14 @@ interface Body {
 
 export async function POST(req: NextRequest) {
   let body: Body;
-  try {
-    body = (await req.json()) as Body;
-  } catch {
-    return jsonError(400, "invalid json body");
-  }
+  try { body = (await req.json()) as Body; }
+  catch { return jsonError(400, "invalid json body"); }
 
   if (!body.baseUrl || !body.apiKey || !body.model || !body.messages?.length) {
     return jsonError(400, "missing required fields: baseUrl / apiKey / model / messages");
   }
 
   const base = body.baseUrl.replace(/\/+$/, "");
-  // Most OpenAI-compatible endpoints expose /v1/chat/completions.
-  // If the user typed a base ending in /v1 we keep it; otherwise append.
   const url = base.endsWith("/v1") ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
 
   const payload: Record<string, unknown> = {
@@ -57,28 +40,37 @@ export async function POST(req: NextRequest) {
     payload.response_format = { type: "json_object" };
   }
 
-  const ctl = AbortSignal.timeout(120_000);
-  let upstream: Response;
+  // 5-minute upstream cap. Wrap the full request+body cycle so a stalled
+  // body stream cannot escape as an unhandled rejection.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 290_000);
+
   try {
-    upstream = await fetch(url, {
+    const upstream = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${body.apiKey}`,
       },
       body: JSON.stringify(payload),
-      signal: ctl,
+      signal: controller.signal,
+    });
+
+    const text = await upstream.text();
+    clearTimeout(timeoutId);
+    return new Response(text, {
+      status: upstream.status,
+      headers: { "Content-Type": upstream.headers.get("Content-Type") ?? "application/json" },
     });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return jsonError(502, `upstream fetch failed: ${msg}`);
+    clearTimeout(timeoutId);
+    const aborted = controller.signal.aborted;
+    const errMsg = e instanceof Error ? e.message : String(e);
+    if (aborted) {
+      return jsonError(504, "上游模型响应超过 5 分钟未返回。试试:1) 减少分集数 (建议 ≤ 8 集 / 批) 2) 换更快的模型");
+    }
+    return jsonError(502, `上游请求失败: ${errMsg}`);
   }
-
-  const text = await upstream.text();
-  return new Response(text, {
-    status: upstream.status,
-    headers: { "Content-Type": upstream.headers.get("Content-Type") ?? "application/json" },
-  });
 }
 
 function jsonError(status: number, message: string) {
