@@ -695,3 +695,102 @@
   .nc-script-side { max-height: 200px; }
   .nc-script-main { max-height: none; }
 }
+
+
+/* ============ Assets ============ */
+.nc-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.nc-asset-card {
+  background: #fff;
+  border: 1px solid #ebe7df;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nc-asset-card:hover {
+  border-color: var(--nc-cyan-soft);
+  box-shadow: 0 4px 16px rgba(14, 165, 184, 0.08);
+  transform: translateY(-1px);
+}
+.nc-asset-thumb {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: #f4f2ed;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nc-asset-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nc-asset-loading, .nc-asset-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-muted);
+}
+.nc-asset-error-pill {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 22px; height: 22px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+.nc-asset-meta {
+  min-height: 32px;
+}
+.nc-asset-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-strong);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.nc-asset-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.nc-asset-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: auto;
+}
+.nc-asset-actions button {
+  flex: 1;
+}
+
+.nc-import-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #ebe7df;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.nc-import-row:hover { background: #fffefb; border-color: var(--nc-cyan-soft); }
+.nc-import-row input[type="checkbox"] { accent-color: var(--nc-cyan); }

@@ -1,5 +1,5 @@
-/** Prompts for 编剧 Agent — skeleton + episode plan + script. */
-import type { Chapter, Episode, EpisodeBlueprint, Project, StorySkeleton } from "../types";
+/** Prompts for 编剧 Agent — skeleton + episode plan + script + asset visual prompt. */
+import type { Asset, Chapter, Episode, EpisodeBlueprint, Project, StorySkeleton } from "../types";
 
 export function compressEvents(chapters: Chapter[]): string {
   const lines: string[] = [];
@@ -91,33 +91,29 @@ export function buildEpisodePlanUser(
   return parts.join("\n");
 }
 
-// =============== Script (per-episode) ===============
-
 export const SCRIPT_SYSTEM = `你是一位资深竖屏短剧编剧,擅长把一集 blueprint 扩写成可拍摄的完整剧本。
 
 约束:
-- 每集 ~30 秒,~150-200 字台词,2-4 个场景 (一个场景就是一个机位/空间切换)
-- 钩开场:第一帧必须吸引滑动观众停下
-- 钩结尾:最后 3 秒必须留悬念,让观众点下一集
-- 台词竖屏短剧风格:**短、辣、直接、带身份感**,避免文绉绉的旁白
-- 动作描述用 "△" 开头 (如 "△伊万端着高脚杯逼近,西装笔挺")
-- 严格用项目设定的语言写台词与动作 (zh-CN 简体中文 / ru-RU 俄语 / en-US 英文 等)
+- 每集 ~30 秒,~150-200 字台词,2-4 个场景
+- 钩开场/钩结尾必须强力
+- 台词竖屏短剧风格:**短、辣、直接、带身份感**
+- 动作描述用 "△" 开头
+- 严格用项目设定的语言写台词与动作
 
 输出严格 JSON,只输出一个对象:
 {
   "synopsis": "100-200 字本集梗概",
   "scenes": [
     {
-      "index": "1-1",                   // 场号-镜次
+      "index": "1-1",
       "location": "晚宴厅角落",
-      "timeOfDay": "夜/内",             // 日/夜 + 内/外
+      "timeOfDay": "夜/内",
       "characters": ["苏晚", "弗拉基米尔"],
-      "actions": ["△晚宴厅灯火辉煌...", "△伊万端着高脚杯..."],
+      "actions": ["△晚宴厅灯火辉煌..."],
       "dialogue": [
         {"character": "苏晚", "emotion": "颤抖", "line": "..."},
-        {"character": "伊万", "emotion": "冷笑", "line": "..."}
       ],
-      "audioCues": ["BGM: 紧张弦乐", "SFX: 杯口轻碰"],
+      "audioCues": ["BGM: 紧张弦乐"],
       "onScreenText": "莫斯科 · 顶级晚宴"
     }
   ]
@@ -142,9 +138,7 @@ export function buildScriptUser(
     skeleton.adaptationPrinciples.map(p => `- ${p}`).join("\n"),
     ``,
   ];
-  if (prevHookEnd) {
-    parts.push(`=== 上一集结尾留白 (供你做承接) ===`, prevHookEnd, ``);
-  }
+  if (prevHookEnd) parts.push(`=== 上一集结尾留白 (供你做承接) ===`, prevHookEnd, ``);
   parts.push(
     `=== 本集 blueprint ===`,
     `EP${String(episode.index).padStart(2, "0")} · 「${episode.title}」`,
@@ -158,4 +152,52 @@ export function buildScriptUser(
     `请按 SCRIPT_SYSTEM 的格式扩写出本集完整剧本 JSON。`,
   );
   return parts.filter(Boolean).join("\n");
+}
+
+// =============== Asset visual prompt ===============
+
+export const ASSET_PROMPT_SYSTEM = `你是一位资深短剧美术指导,擅长为短剧角色 / 场景 / 道具写出精准的图像生成提示词 (image-gen prompt)。
+
+输出严格 JSON: { "prompt": "..." },不要 markdown,不要解释。
+
+提示词写作要求:
+- 用英文(图像模型对英文反应更稳定),除非项目语言不是中文/英文,则用项目语言
+- 描述要 specific:外貌细节、服装、光线、镜头(对人物用 portrait,场景用 establishing shot,道具用 product shot)、风格(photorealistic / cinematic / 4K / shot on Sony A7)
+- 短剧调性:都市霸总用冷峻光影,古装宫斗用奢华色调,玄幻仙侠用空灵雾气
+- 画面统一保持人物在中央构图,简洁背景,便于后续合成
+- 不要写品牌词或广告语;不要写 NSFW;严格人物一致性 (后续每集都会复用)`;
+
+export function buildAssetPromptUser(project: Project, asset: Asset, skeleton: StorySkeleton | null): string {
+  const parts: string[] = [
+    `项目: ${project.name} · ${project.genre} · ${project.tone} · ${project.platform} 竖屏短剧`,
+    `资产类型: ${kindLabel(asset.kind)}`,
+    `资产名称: ${asset.name}`,
+  ];
+  if (asset.role) parts.push(`角色定位: ${asset.role}`);
+  if (asset.description) parts.push(`描述: ${asset.description}`);
+  if (skeleton) {
+    parts.push(``, `=== 故事骨架 (供你定调) ===`,
+      `一句话故事: ${skeleton.oneLiner}`,
+      `改编原则: ${skeleton.adaptationPrinciples.slice(0, 3).join(" / ")}`);
+    if (asset.kind === "char") {
+      const match = skeleton.characterCores.find(c => c.name === asset.name);
+      if (match) parts.push(`角色弧光: ${match.arc}`);
+    }
+  }
+  parts.push(
+    ``,
+    asset.kind === "char"
+      ? `请写出这个角色的人物参考图提示词 (full-body or 3/4 portrait, 干净背景便于后续合成,角色特征突出便于跨集复用)。`
+      : asset.kind === "scene"
+        ? `请写出这个场景的取景参考图提示词 (establishing shot, 9:16 vertical, 适合短剧首镜)。`
+        : asset.kind === "prop"
+          ? `请写出这道具的产品级特写提示词 (product shot, 干净背景)。`
+          : `请写出这个素材的图像提示词。`,
+    `输出 JSON: { "prompt": "..." }`,
+  );
+  return parts.join("\n");
+}
+
+function kindLabel(k: string): string {
+  return k === "char" ? "角色" : k === "scene" ? "场景" : k === "prop" ? "道具" : "素材";
 }

@@ -1,12 +1,15 @@
 import type {
-  Chapter, Episode, EpisodeBlueprint, EpisodeScript, Project,
+  Asset, Chapter, Episode, EpisodeBlueprint, EpisodeScript, Project,
   ScriptScene, StorySkeleton, SkeletonProvenance,
 } from "../types";
-import { chat, extractJson, type LLMConfig } from "../llm";
+import {
+  chat, extractJson, imageGenerate, type LLMConfig, type ImageConfig,
+} from "../llm";
 import {
   SKELETON_SYSTEM, buildSkeletonUser,
   EPISODE_PLAN_SYSTEM, buildEpisodePlanUser,
   SCRIPT_SYSTEM, buildScriptUser,
+  ASSET_PROMPT_SYSTEM, buildAssetPromptUser,
 } from "./prompts";
 
 export interface RunSkeletonResult { skeleton: StorySkeleton; raw: string; }
@@ -114,12 +117,7 @@ export async function runEpisodePlan(
   return { blueprints };
 }
 
-// =============== Script (per-episode) ===============
-
-export interface RunScriptOptions {
-  prevHookEnd?: string;
-  signal?: AbortSignal;
-}
+export interface RunScriptOptions { prevHookEnd?: string; signal?: AbortSignal; }
 
 export async function runEpisodeScript(
   llm: LLMConfig, project: Project, skeleton: StorySkeleton,
@@ -149,20 +147,60 @@ export async function runEpisodeScript(
   })) : [];
 
   return {
-    episodeId: episode.id,
-    projectId: episode.projectId,
-    episodeIndex: episode.index,
-    episodeTitle: episode.title,
+    episodeId: episode.id, projectId: episode.projectId,
+    episodeIndex: episode.index, episodeTitle: episode.title,
     metadata: {
-      targetDuration: "30 秒",
-      targetWords: "150-200 字台词",
-      platform: project.platform,
-      style: `${project.genre} · ${project.tone}`,
+      targetDuration: "30 秒", targetWords: "150-200 字台词",
+      platform: project.platform, style: `${project.genre} · ${project.tone}`,
       beats: episode.blueprint?.beats?.join(" → ") ?? "",
     },
     synopsis: String(parsed.synopsis ?? ""),
     scenes,
-    generatedAt: Date.now(),
-    model: llm.model,
+    generatedAt: Date.now(), model: llm.model,
   };
+}
+
+// =============== Asset prompt + image ===============
+
+export interface RunAssetPromptOptions { signal?: AbortSignal; }
+export async function runAssetPrompt(
+  llm: LLMConfig, project: Project, asset: Asset, skeleton: StorySkeleton | null,
+  opts: RunAssetPromptOptions = {},
+): Promise<string> {
+  const resp = await chat(llm, {
+    messages: [
+      { role: "system", content: ASSET_PROMPT_SYSTEM },
+      { role: "user", content: buildAssetPromptUser(project, asset, skeleton) },
+    ],
+    temperature: 0.6, json: true, signal: opts.signal,
+  });
+  const parsed = extractJson<{ prompt?: string }>(resp.content);
+  const prompt = String(parsed?.prompt ?? "").trim();
+  if (!prompt) throw new Error("LLM 没产出 prompt 字段");
+  return prompt;
+}
+
+export interface RunAssetImageOptions {
+  /** override aspect/size for this call. default by asset kind. */
+  size?: string;
+  aspectRatio?: string;
+  signal?: AbortSignal;
+}
+
+export async function runAssetImage(
+  img: ImageConfig, asset: Asset, opts: RunAssetImageOptions = {},
+): Promise<{ url?: string; b64?: string }> {
+  if (!asset.prompt) throw new Error("资产缺少 prompt — 请先生成提示词");
+  // Default sizing per kind (vertical for scenes, square for char/prop/media)
+  const useAR = img.useAspectRatio;
+  const defaultSize = useAR
+    ? (asset.kind === "scene" ? "9:16" : "1:1")
+    : (asset.kind === "scene" ? "1024x1792" : "1024x1024");
+  const result = await imageGenerate(img, {
+    prompt: asset.prompt,
+    size: useAR ? undefined : (opts.size ?? img.defaultSize ?? defaultSize),
+    aspectRatio: useAR ? (opts.aspectRatio ?? img.defaultSize ?? defaultSize) : undefined,
+    signal: opts.signal,
+  });
+  return { url: result.url, b64: result.b64 };
 }

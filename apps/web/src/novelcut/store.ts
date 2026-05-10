@@ -58,6 +58,17 @@ export function appendChapters(projectId: string, parts: { title: string; body: 
 
 export function listAssets(projectId: string): Asset[] { return readJson<Asset[]>(k(`assets:${projectId}`), []); }
 export function setAssets(projectId: string, assets: Asset[]): void { writeJson(k(`assets:${projectId}`), assets); }
+export function upsertAsset(asset: Asset): Asset {
+  const cur = listAssets(asset.projectId);
+  const next = cur.filter(a => a.id !== asset.id);
+  next.push({ ...asset, updatedAt: Date.now() });
+  next.sort((a, b) => (a.createdAt - b.createdAt));
+  setAssets(asset.projectId, next);
+  return asset;
+}
+export function deleteAsset(projectId: string, assetId: string): void {
+  setAssets(projectId, listAssets(projectId).filter(a => a.id !== assetId));
+}
 
 export function listEpisodes(projectId: string): Episode[] { return readJson<Episode[]>(k(`episodes:${projectId}`), []); }
 export function setEpisodes(projectId: string, episodes: Episode[]): void { writeJson(k(`episodes:${projectId}`), episodes); }
@@ -68,18 +79,11 @@ export function getSkeleton(projectId: string): StorySkeleton | null {
 export function saveSkeleton(projectId: string, skeleton: StorySkeleton): void {
   writeJson(k(`skeleton:${projectId}`), skeleton);
 }
-export function clearSkeleton(projectId: string): void {
-  writeJson(k(`skeleton:${projectId}`), null);
-}
+export function clearSkeleton(projectId: string): void { writeJson(k(`skeleton:${projectId}`), null); }
 
-// ----- Scripts (keyed by episodeId within project) -----
 type ScriptMap = Record<string, EpisodeScript>;
-export function listScripts(projectId: string): ScriptMap {
-  return readJson<ScriptMap>(k(`scripts:${projectId}`), {});
-}
-export function getScript(projectId: string, episodeId: string): EpisodeScript | undefined {
-  return listScripts(projectId)[episodeId];
-}
+export function listScripts(projectId: string): ScriptMap { return readJson<ScriptMap>(k(`scripts:${projectId}`), {}); }
+export function getScript(projectId: string, episodeId: string): EpisodeScript | undefined { return listScripts(projectId)[episodeId]; }
 export function saveScript(projectId: string, script: EpisodeScript): void {
   const map = listScripts(projectId);
   map[script.episodeId] = script;

@@ -45,39 +45,19 @@ export interface EpisodeBlueprint {
   retainsEvents: string[]; newScenes?: string[];
 }
 
-export interface DialogueLine {
-  character: string;
-  emotion?: string;
-  line: string;
-}
+export interface DialogueLine { character: string; emotion?: string; line: string; }
 
 export interface ScriptScene {
-  index: string;          // e.g. "1-1"
-  location: string;
-  timeOfDay: string;      // e.g. "夜/内"
-  characters: string[];
-  actions: string[];      // △-prefixed staging notes
-  dialogue: DialogueLine[];
-  audioCues?: string[];
-  onScreenText?: string;
+  index: string; location: string; timeOfDay: string; characters: string[];
+  actions: string[]; dialogue: DialogueLine[];
+  audioCues?: string[]; onScreenText?: string;
 }
 
 export interface EpisodeScript {
-  episodeId: string;
-  projectId: string;
-  episodeIndex: number;
-  episodeTitle: string;
-  metadata: {
-    targetDuration: string;
-    targetWords: string;
-    platform: string;
-    style: string;
-    beats: string;
-  };
-  synopsis: string;
-  scenes: ScriptScene[];
-  generatedAt: number;
-  model?: string;
+  episodeId: string; projectId: string; episodeIndex: number; episodeTitle: string;
+  metadata: { targetDuration: string; targetWords: string; platform: string; style: string; beats: string; };
+  synopsis: string; scenes: ScriptScene[];
+  generatedAt: number; model?: string;
 }
 
 export interface Episode {
@@ -86,11 +66,27 @@ export interface Episode {
   status: "draft" | "scripted" | "shotlisted" | "rendered";
 }
 
+export type AssetKind = "char" | "prop" | "scene" | "media";
+
 export interface Asset {
-  id: string; projectId: string;
-  kind: "char" | "prop" | "scene" | "media";
-  name: string; description?: string; prompt?: string; previewUrl?: string;
+  id: string;
+  projectId: string;
+  kind: AssetKind;
+  name: string;
+  /** for characters: kept role from skeleton (女主/男主/反派/...) */
+  role?: string;
+  /** for characters: arc; for scenes: ambiance description; for props: usage */
+  description?: string;
+  /** rich visual prompt fed to image API */
+  prompt?: string;
+  /** generated image URL (preferred) or data URI */
+  previewUrl?: string;
+  promptStatus?: "idle" | "running" | "done" | "error";
+  imageStatus?: "idle" | "running" | "done" | "error";
+  promptError?: string;
+  imageError?: string;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface TaskRow {
