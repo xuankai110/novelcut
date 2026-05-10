@@ -133,6 +133,7 @@ function LLMSection({ onClose }: { onClose: () => void }) {
 
 function ImageSection({ onClose }: { onClose: () => void }) {
   const initial = loadImageConfig();
+  const llmInitial = loadLLMConfig();
   const [provider, setProvider] = useState<ImageProviderId>(initial?.provider ?? "openai");
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? IMAGE_PROVIDERS.find(p => p.id === "openai")!.defaultBaseUrl);
   const [apiKey, setApiKey] = useState(initial?.apiKey ?? "");
@@ -177,6 +178,17 @@ function ImageSection({ onClose }: { onClose: () => void }) {
 
   return (
     <>
+      {!initial && (
+        <div style={{
+          padding: "12px 14px", marginBottom: 16, borderRadius: 8,
+          background: "var(--nc-cyan-tint)", border: "1px solid var(--nc-cyan-soft)",
+          fontSize: 12, color: "var(--nc-cyan-strong)", lineHeight: 1.6,
+        }}>
+          <strong>📌 图像模型独立于 LLM 配置。</strong>
+          {llmInitial && ` 你已配置 ${llmInitial.provider} 作为 LLM,但它` + (llmInitial.provider === "deepseek" || llmInitial.provider === "anthropic" ? "不支持出图" : "可能不支持出图") + ",所以这里需要单独配 OpenAI / grsai / 可灵 等图像供应商。"}
+          {!llmInitial && " 大模型用于写文 (剧本/提示词/编剧),图像模型用于出图。请单独配 OpenAI / grsai / 可灵 等图像供应商。"}
+        </div>
+      )}
       <div className="nc-form-row">
         <label className="nc-label">供应商</label>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>

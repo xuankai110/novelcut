@@ -126,6 +126,8 @@ export function AssetsTab({ project }: { project: Project }) {
 
   const onGenerateOne = async (asset: Asset, mode: "prompt" | "image" | "full") => {
     setError(null);
+    if (mode !== "prompt" && !ensureImg()) return;
+    if (mode !== "image" && !ensureLLM()) return;
     const ac = new AbortController();
     abortRef.current = ac;
     try {
@@ -219,10 +221,20 @@ export function AssetsTab({ project }: { project: Project }) {
             </button>
           ) : (
             <>
-              <button className="nc-btn nc-btn-ghost" disabled={filtered.length === 0} onClick={() => onBatchGenerate("prompt")}>
+              <button
+                className="nc-btn nc-btn-ghost"
+                disabled={filtered.length === 0 || !llm}
+                title={!llm ? "未配置 LLM" : ""}
+                onClick={() => onBatchGenerate("prompt")}
+              >
                 ⚡ 批量生成提示词
               </button>
-              <button className="nc-btn nc-btn-primary" disabled={filtered.length === 0} onClick={() => onBatchGenerate("full")}>
+              <button
+                className="nc-btn nc-btn-primary"
+                disabled={filtered.length === 0 || !llm || !img}
+                title={!img ? "未配置图像模型 — 无法出图" : !llm ? "未配置 LLM" : ""}
+                onClick={() => onBatchGenerate("full")}
+              >
                 ⚡ 一键全自动 (提示词 + 出图)
               </button>
             </>
@@ -230,6 +242,34 @@ export function AssetsTab({ project }: { project: Project }) {
           <button className="nc-btn nc-btn-ghost" onClick={() => onAddManual()}>+ 新增{kindLabel(kind)}</button>
         </div>
       </div>
+
+      {!img && (
+        <div className="nc-callout" style={{
+          marginBottom: 16,
+          background: "linear-gradient(135deg, #fef3c7 0%, #fff 80%)",
+          borderColor: "#fcd34d",
+        }}>
+          <span className="nc-callout-kicker" style={{ color: "#92400e", background: "#fff" }}>
+            ⚠ 图像模型未配置
+          </span>
+          <h4>资产出图需要单独配置图像模型</h4>
+          <p>
+            <strong>大模型 (LLM) 和图像模型是两个独立配置。</strong>
+            {llm && (llm.provider === "deepseek" || llm.provider === "anthropic")
+              ? `你当前的 ${llm.provider} 只能写文,不能出图。`
+              : ""}
+            出图需要 OpenAI (gpt-image-2) / grsai / 可灵 / new-api 网关 等图像供应商。
+            目前你<strong>只能生成提示词</strong>,不能直接出图。
+          </p>
+          <button
+            className="nc-btn nc-btn-primary"
+            style={{ marginTop: 10 }}
+            onClick={() => setShowSettings(true)}
+          >
+            🖼 立即配置图像模型
+          </button>
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 4, marginBottom: 18, borderBottom: "1px solid #ebe7df" }}>
         {TABS.map((t) => (
@@ -491,7 +531,13 @@ function AssetDrawer({ asset, onClose, onEdit, onDelete, onGen }: {
           ) : (
             <>
               <button className="nc-btn nc-btn-ghost" onClick={() => onGen("prompt")}>重写提示词</button>
-              <button className="nc-btn nc-btn-primary" onClick={() => onGen("image")}>{asset.previewUrl ? "重新出图" : "出图"}</button>
+              <button
+                className="nc-btn nc-btn-primary"
+                onClick={() => onGen("image")}
+                title={"出图需要图像模型配置"}
+              >
+                {asset.previewUrl ? "重新出图" : "出图"}
+              </button>
             </>
           )}
         </div>
