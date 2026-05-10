@@ -503,3 +503,195 @@
   font-size: 12px;
 }
 .nc-capacity-foot button { margin-left: auto; }
+
+
+/* ============ Scripts (split-view) ============ */
+.nc-script-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  align-items: stretch;
+  min-height: calc(100vh - 320px);
+}
+.nc-script-side {
+  background: #fff;
+  border: 1px solid #ebe7df;
+  border-radius: 12px;
+  padding: 8px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nc-script-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+  transition: background 0.12s;
+}
+.nc-script-item:hover { background: #f9f6f0; }
+.nc-script-item[aria-selected="true"] {
+  background: var(--nc-cyan-tint);
+  color: var(--nc-cyan-strong);
+  font-weight: 600;
+}
+.nc-script-item-num {
+  flex-shrink: 0;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: #f4f2ed;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.nc-script-item[aria-selected="true"] .nc-script-item-num {
+  background: var(--nc-cyan);
+  color: #fff;
+}
+.nc-script-item-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.nc-script-item-state { flex-shrink: 0; }
+
+.nc-script-main {
+  background: #fff;
+  border: 1px solid #ebe7df;
+  border-radius: 12px;
+  overflow: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.nc-script-doc { padding: 24px 28px; }
+
+.nc-script-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #ebe7df;
+}
+
+.nc-script-hook {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: var(--nc-cyan-tint);
+  color: var(--nc-cyan-strong);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--nc-cyan-soft);
+}
+
+.nc-script-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 22px 0 10px;
+}
+
+.nc-script-synopsis {
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text);
+  background: #fffefb;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #f4f2ed;
+}
+
+.nc-script-scene {
+  border: 1px solid #ebe7df;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  background: #fff;
+}
+.nc-script-scene-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #ebe7df;
+  flex-wrap: wrap;
+}
+
+.nc-script-screen-text {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #1a1916;
+  color: #fff;
+  font-size: 12px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-family: ui-monospace, monospace;
+}
+
+.nc-script-action {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 4px 0;
+  font-style: italic;
+  line-height: 1.7;
+}
+
+.nc-script-dialogue {
+  margin: 8px 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--nc-cyan-soft);
+  background: #fffefb;
+  border-radius: 0 6px 6px 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.nc-script-char {
+  font-weight: 700;
+  color: var(--nc-cyan-strong);
+  margin-right: 6px;
+}
+.nc-script-emotion {
+  font-size: 11px;
+  color: #f59e0b;
+  margin-right: 6px;
+  font-style: italic;
+}
+.nc-script-line { color: var(--text-strong); }
+
+.nc-script-audio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #ebe7df;
+  font-size: 11px;
+  color: #a16207;
+}
+.nc-script-audio span {
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+@media (max-width: 920px) {
+  .nc-script-shell { grid-template-columns: 1fr; }
+  .nc-script-side { max-height: 200px; }
+  .nc-script-main { max-height: none; }
+}

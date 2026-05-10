@@ -1,6 +1,13 @@
-import type { Chapter, EpisodeBlueprint, Project, StorySkeleton, SkeletonProvenance } from "../types";
+import type {
+  Chapter, Episode, EpisodeBlueprint, EpisodeScript, Project,
+  ScriptScene, StorySkeleton, SkeletonProvenance,
+} from "../types";
 import { chat, extractJson, type LLMConfig } from "../llm";
-import { SKELETON_SYSTEM, buildSkeletonUser, EPISODE_PLAN_SYSTEM, buildEpisodePlanUser } from "./prompts";
+import {
+  SKELETON_SYSTEM, buildSkeletonUser,
+  EPISODE_PLAN_SYSTEM, buildEpisodePlanUser,
+  SCRIPT_SYSTEM, buildScriptUser,
+} from "./prompts";
 
 export interface RunSkeletonResult { skeleton: StorySkeleton; raw: string; }
 
@@ -44,8 +51,7 @@ export async function runSkeleton(
     },
     adaptationPrinciples: Array.isArray(parsed.adaptationPrinciples)
       ? parsed.adaptationPrinciples.map(String) : [],
-    generatedAt: Date.now(),
-    model: llm.model,
+    generatedAt: Date.now(), model: llm.model,
     basedOn: buildProvenance(project, chapters),
   };
   return { skeleton, raw: resp.content };
@@ -59,19 +65,12 @@ function normAct(a: any, fallbackRange: string) {
   };
 }
 
-export interface RunEpisodePlanProgress {
-  done: number; total: number; chunkLabel: string;
-}
-
+export interface RunEpisodePlanProgress { done: number; total: number; chunkLabel: string; }
 export interface RunEpisodePlanOptions {
-  /** how many episodes per LLM call. default 5. */
   chunkSize?: number;
-  /** progress callback (after each chunk). */
   onChunk?: (p: RunEpisodePlanProgress) => void;
-  /** abort signal */
   signal?: AbortSignal;
 }
-
 export interface RunEpisodePlanResult { blueprints: EpisodeBlueprint[]; }
 
 export async function runEpisodePlan(
@@ -81,14 +80,12 @@ export async function runEpisodePlan(
   const used = chapters.filter(c => c.eventsStatus === "done");
   const chunkSize = Math.max(2, opts.chunkSize ?? 5);
   const blueprints: EpisodeBlueprint[] = [];
-
   let cursor = 1;
   while (cursor <= episodeCount) {
     if (opts.signal?.aborted) throw new Error("已取消");
     const end = Math.min(episodeCount, cursor + chunkSize - 1);
     const chunkLabel = `第 ${cursor}-${end} 集`;
     opts.onChunk?.({ done: cursor - 1, total: episodeCount, chunkLabel: `生成中: ${chunkLabel}` });
-
     const resp = await chat(llm, {
       messages: [
         { role: "system", content: EPISODE_PLAN_SYSTEM },
@@ -108,7 +105,6 @@ export async function runEpisodePlan(
       retainsEvents: Array.isArray(e?.retainsEvents) ? e.retainsEvents.map(String) : [],
       newScenes: Array.isArray(e?.newScenes) ? e.newScenes.map(String) : undefined,
     }));
-    // accept only items inside the requested range, then append
     const filtered = batch.filter(b => b.index >= cursor && b.index <= end);
     blueprints.push(...filtered);
     blueprints.sort((a, b) => a.index - b.index);
@@ -116,4 +112,57 @@ export async function runEpisodePlan(
     cursor = end + 1;
   }
   return { blueprints };
+}
+
+// =============== Script (per-episode) ===============
+
+export interface RunScriptOptions {
+  prevHookEnd?: string;
+  signal?: AbortSignal;
+}
+
+export async function runEpisodeScript(
+  llm: LLMConfig, project: Project, skeleton: StorySkeleton,
+  episode: Episode, opts: RunScriptOptions = {},
+): Promise<EpisodeScript> {
+  const resp = await chat(llm, {
+    messages: [
+      { role: "system", content: SCRIPT_SYSTEM },
+      { role: "user", content: buildScriptUser(project, skeleton, episode, opts.prevHookEnd) },
+    ],
+    temperature: 0.55, json: true, signal: opts.signal,
+  });
+  const parsed = extractJson<{ synopsis?: string; scenes?: any[] }>(resp.content);
+  const scenes: ScriptScene[] = Array.isArray(parsed.scenes) ? parsed.scenes.map((s: any, i: number) => ({
+    index: String(s?.index ?? `1-${i + 1}`),
+    location: String(s?.location ?? ""),
+    timeOfDay: String(s?.timeOfDay ?? ""),
+    characters: Array.isArray(s?.characters) ? s.characters.map(String) : [],
+    actions: Array.isArray(s?.actions) ? s.actions.map(String) : [],
+    dialogue: Array.isArray(s?.dialogue) ? s.dialogue.map((d: any) => ({
+      character: String(d?.character ?? ""),
+      emotion: d?.emotion ? String(d.emotion) : undefined,
+      line: String(d?.line ?? ""),
+    })) : [],
+    audioCues: Array.isArray(s?.audioCues) ? s.audioCues.map(String) : undefined,
+    onScreenText: s?.onScreenText ? String(s.onScreenText) : undefined,
+  })) : [];
+
+  return {
+    episodeId: episode.id,
+    projectId: episode.projectId,
+    episodeIndex: episode.index,
+    episodeTitle: episode.title,
+    metadata: {
+      targetDuration: "30 秒",
+      targetWords: "150-200 字台词",
+      platform: project.platform,
+      style: `${project.genre} · ${project.tone}`,
+      beats: episode.blueprint?.beats?.join(" → ") ?? "",
+    },
+    synopsis: String(parsed.synopsis ?? ""),
+    scenes,
+    generatedAt: Date.now(),
+    model: llm.model,
+  };
 }

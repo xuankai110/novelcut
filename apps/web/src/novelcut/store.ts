@@ -1,5 +1,5 @@
 /** NovelCut local persistence — localStorage only for MVP. */
-import type { Asset, Chapter, Episode, Project, StorySkeleton, TaskRow } from "./types";
+import type { Asset, Chapter, Episode, EpisodeScript, Project, StorySkeleton, TaskRow } from "./types";
 
 const NS = "novelcut:v1";
 const k = (suffix: string) => `${NS}:${suffix}`;
@@ -33,6 +33,7 @@ export function deleteProject(id: string): void {
   writeJson(k(`episodes:${id}`), []);
   writeJson(k(`tasks:${id}`), []);
   writeJson(k(`skeleton:${id}`), null);
+  writeJson(k(`scripts:${id}`), {});
 }
 
 export function listChapters(projectId: string): Chapter[] {
@@ -71,6 +72,25 @@ export function clearSkeleton(projectId: string): void {
   writeJson(k(`skeleton:${projectId}`), null);
 }
 
+// ----- Scripts (keyed by episodeId within project) -----
+type ScriptMap = Record<string, EpisodeScript>;
+export function listScripts(projectId: string): ScriptMap {
+  return readJson<ScriptMap>(k(`scripts:${projectId}`), {});
+}
+export function getScript(projectId: string, episodeId: string): EpisodeScript | undefined {
+  return listScripts(projectId)[episodeId];
+}
+export function saveScript(projectId: string, script: EpisodeScript): void {
+  const map = listScripts(projectId);
+  map[script.episodeId] = script;
+  writeJson(k(`scripts:${projectId}`), map);
+}
+export function deleteScript(projectId: string, episodeId: string): void {
+  const map = listScripts(projectId);
+  delete map[episodeId];
+  writeJson(k(`scripts:${projectId}`), map);
+}
+
 export function listTasks(projectId?: string): TaskRow[] {
   if (projectId) return readJson<TaskRow[]>(k(`tasks:${projectId}`), []);
   return listProjects().flatMap((p) => readJson<TaskRow[]>(k(`tasks:${p.id}`), []));
@@ -88,7 +108,6 @@ export function hasSeenWelcome(): boolean {
 export function markWelcomeSeen(): void { window.localStorage.setItem(k("welcome-seen"), "1"); }
 
 const CHAPTER_REGEX = /^(?:第[一二三四五六七八九十百千万0-9０-９]+[章回节卷]|Chapter\s+\d+|CHAPTER\s+\d+|序章|楔子|尾声|后记)/i;
-
 export interface SplitResult { parts: { title: string; body: string }[]; hadMarkers: boolean; }
 
 export function splitChapters(text: string): SplitResult {
@@ -112,16 +131,13 @@ export function splitChapters(text: string): SplitResult {
     hadMarkers: foundMarker,
   };
 }
-
 export function autoSplitByLength(text: string, targetCharsPerChapter = 3000): { title: string; body: string }[] {
   const paragraphs = text.replace(/\r\n/g, "\n").split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   if (paragraphs.length === 0) return [];
   const out: { title: string; body: string }[] = [];
-  let buffer: string[] = [];
-  let bufLen = 0;
+  let buffer: string[] = []; let bufLen = 0;
   for (const p of paragraphs) {
-    buffer.push(p);
-    bufLen += p.length;
+    buffer.push(p); bufLen += p.length;
     if (bufLen >= targetCharsPerChapter) {
       out.push({ title: `第 ${out.length + 1} 段`, body: buffer.join("\n\n") });
       buffer = []; bufLen = 0;

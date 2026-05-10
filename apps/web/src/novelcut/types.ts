@@ -26,26 +26,16 @@ export interface CharacterCore { name: string; role: string; arc: string; }
 export interface ActPlan { range: string; summary: string; keyBeats: string[]; }
 
 export interface SkeletonProvenance {
-  /** chapter ids the skeleton was generated from (sorted) */
-  chapterIds: string[];
-  chapterCount: number;
-  eventCount: number;
-  wordCount: number;
-  /** target episodes at generation time */
-  targetEpisodes: number;
-  /** wordCount / (targetEpisodes * 1500) — 0..1+ */
-  coverage: number;
+  chapterIds: string[]; chapterCount: number; eventCount: number;
+  wordCount: number; targetEpisodes: number; coverage: number;
 }
 
 export interface StorySkeleton {
-  oneLiner: string;
-  storyCore: string;
-  hiddenPlot: string;
+  oneLiner: string; storyCore: string; hiddenPlot: string;
   characterCores: CharacterCore[];
   threeActs: { act1: ActPlan; act2: ActPlan; act3: ActPlan };
   adaptationPrinciples: string[];
-  generatedAt: number;
-  model?: string;
+  generatedAt: number; model?: string;
   basedOn?: SkeletonProvenance;
 }
 
@@ -53,6 +43,41 @@ export interface EpisodeBlueprint {
   index: number; title: string; summary: string;
   beats: string[]; hookOpen: string; hookEnd: string;
   retainsEvents: string[]; newScenes?: string[];
+}
+
+export interface DialogueLine {
+  character: string;
+  emotion?: string;
+  line: string;
+}
+
+export interface ScriptScene {
+  index: string;          // e.g. "1-1"
+  location: string;
+  timeOfDay: string;      // e.g. "夜/内"
+  characters: string[];
+  actions: string[];      // △-prefixed staging notes
+  dialogue: DialogueLine[];
+  audioCues?: string[];
+  onScreenText?: string;
+}
+
+export interface EpisodeScript {
+  episodeId: string;
+  projectId: string;
+  episodeIndex: number;
+  episodeTitle: string;
+  metadata: {
+    targetDuration: string;
+    targetWords: string;
+    platform: string;
+    style: string;
+    beats: string;
+  };
+  synopsis: string;
+  scenes: ScriptScene[];
+  generatedAt: number;
+  model?: string;
 }
 
 export interface Episode {
