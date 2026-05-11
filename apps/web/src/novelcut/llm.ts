@@ -145,12 +145,40 @@ async function _imageGenerateOnce(cfg: ImageConfig, opts: ImageOptions): Promise
   });
 }
 
+/** Some providers signal load-shedding via non-standard status codes (400/422)
+ *  with messages like "excessive system load", "queue full", "model busy",
+ *  "rate limit", "concurrent". Treat these as retryable. */
+const RETRYABLE_BODY_PATTERNS = [
+  /excessive\s+system\s+load/i,
+  /queue\s+(is\s+)?full/i,
+  /(model|server|system)\s+busy/i,
+  /rate[-\s]?limit/i,
+  /too\s+many\s+request/i,
+  /concurrent(ly)?\s+(limit|too\s+many)/i,
+  /try\s+again\s+(later|in\s+a\s+(few|moment))/i,
+  /service\s+(unavailable|overloaded)/i,
+  /capacity\s+(exceeded|reached)/i,
+  /timeout/i,
+];
+
+function isRetryableResponse(status: number, bodyText: string): boolean {
+  if ([429, 502, 503, 504].includes(status)) return true;
+  if (status === 400 || status === 422 || status === 500) {
+    return RETRYABLE_BODY_PATTERNS.some(re => re.test(bodyText));
+  }
+  return false;
+}
+
 export async function imageGenerate(cfg: ImageConfig, opts: ImageOptions): Promise<ImageResult> {
   let resp = await _imageGenerateOnce(cfg, opts);
-  // Retry once on gateway errors after a small backoff — providers often self-heal in <30s
-  if ([502, 503, 504].includes(resp.status) && !opts.signal?.aborted) {
-    await new Promise(r => setTimeout(r, 8000));
-    if (!opts.signal?.aborted) resp = await _imageGenerateOnce(cfg, opts);
+  // Smart retry: standard 5xx + 429, plus 400/422 with load-shedding phrases.
+  // We peek at the body (clone so we can still consume below) to decide.
+  if (!resp.ok && !opts.signal?.aborted) {
+    const peek = await resp.clone().text().catch(() => "");
+    if (isRetryableResponse(resp.status, peek)) {
+      await new Promise(r => setTimeout(r, 8000));
+      if (!opts.signal?.aborted) resp = await _imageGenerateOnce(cfg, opts);
+    }
   }
   ;
   const text = await resp.text();
