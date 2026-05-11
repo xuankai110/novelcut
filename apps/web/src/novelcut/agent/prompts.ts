@@ -326,7 +326,6 @@ export const SHOTLIST_SYSTEM = `你是资深竖屏 9:16 短剧分镜师。给你
 - 钩结尾镜:单独成镜,留白
 - 长镜 (>4s) 慎用,只在情绪积累时使用
 - 一场 2-3 镜偏紧凑,4-5 镜偏铺陈
-- 信息密度:每镜要么推进剧情,要么揭示性格,要么放大情绪
 
 镜头语言:
   framing 候选: ECU(极特,眼/唇) / CU(特写,脸) / MCU(中近,胸上) / MS(中景,腰上) / MLS(中远,膝上) / LS(远景,全身) / EWS(大全,场域) / INSERT(空镜,物件) / OTS(过肩)
@@ -342,7 +341,15 @@ export const SHOTLIST_SYSTEM = `你是资深竖屏 9:16 短剧分镜师。给你
   dialogue: 如果这镜对应一句台词,{character, line};没有则不写
   onScreenText: 屏幕字幕 (片名条 / 时间地点字幕 / 紧急插字),没有则不写
   audioCue: BGM/SFX 提示 (e.g. "BGM: 弦乐紧张") ,没有则不写
-  imagePrompt: 这帧的英文图像 prompt seed (200-400 字符,描述构图/光线/情绪/色调/氛围,不要写人物外貌细节,人物特征会经资产参考自动注入)
+  imagePrompt: 这帧的英文图像 prompt seed (150-300 字符),**必须以镜头景别开头**,例如:
+    - ECU 写: "Extreme close-up of [subject's] eyes wide with fear, [emotion/action detail], [lighting/color mood]. Frame fills with face only, no body visible."
+    - CU  写: "Close-up of [subject's] face showing [emotion], [lighting]. Head and shoulders only, no body below."
+    - MCU 写: "Medium close-up of [subject], chest-up framing, [action], [setting context]."
+    - MS  写: "Medium shot of [subject] from waist up, [action/pose], [setting]."
+    - LS  写: "Long shot full body of [subject] in [setting], [action], [atmosphere]."
+    - INSERT 写: "Insert macro shot of [object/hand], [detail], [lighting]."
+    - OTS 写: "Over-the-shoulder shot, foreground [character's] shoulder out of focus, [main subject] in middle facing camera, [action]."
+    严格遵守"镜头景别开头 + 主体动作 + 氛围光线"的句式。**不要**写人物外貌细节(发色/身材/服装),人物特征会经资产参考自动注入。
 
 输出严格 JSON: { "shots": [{...}, ...] }
 不要 markdown 代码块,不要任何解释文字,只输出 JSON。`;
@@ -351,7 +358,6 @@ export interface ShotlistContext {
   project: Project;
   skeleton: StorySkeleton | null;
   episode: Episode;
-  /** the script scene to decompose */
   scene: {
     index: string;
     location: string;
@@ -401,59 +407,196 @@ export function buildShotlistUser(ctx: ShotlistContext): string {
   return parts.join("\n");
 }
 
-/** Assemble the final image-gen prompt for one shot:
- *  shot.imagePrompt + framing keywords + camera-move keywords + linked asset prompts (textual fallback for character consistency).
- */
+// ---- shot image prompt assembly (framing-obedient version) ----
+
+interface FramingDirective {
+  pos: string;
+  neg: string;
+}
+
+const FRAMING_DIRECTIVES: Record<string, FramingDirective> = {
+  ECU: {
+    pos: "EXTREME CLOSE-UP shot. Composition: tight crop on subject's eyes or specific facial feature only, face fills the entire frame, camera inches from skin. Only face/eyes visible",
+    neg: "no body visible, no torso, no shoulders, no full body, no wide shot, no medium shot, no environment visible around subject",
+  },
+  CU: {
+    pos: "CLOSE-UP shot. Composition: head fills frame from chin to forehead, only upper shoulders barely visible, face is the dominant element, camera close to face",
+    neg: "no body visible below upper shoulders, no torso, no full body, no wide shot, no medium shot",
+  },
+  MCU: {
+    pos: "MEDIUM CLOSE-UP shot from chest up. Composition: head and shoulders fully visible, top of chest visible, camera at eye level",
+    neg: "no lower body visible, no waist, no legs, no full body shot, no wide shot",
+  },
+  MS: {
+    pos: "MEDIUM shot from waist up. Composition: head, torso, hands visible, camera at chest height. About half the body in frame",
+    neg: "no legs visible, no full body, no wide environment shot",
+  },
+  MLS: {
+    pos: "MEDIUM LONG SHOT from knees up. Composition: most of body visible from knees to head, some environment around subject",
+    neg: "no feet cropped from above ankle, no extreme close-up, no face-only shot",
+  },
+  LS: {
+    pos: "LONG SHOT full body. Composition: subject from head to toe completely visible in frame, environment visible around. Subject takes about half the frame height",
+    neg: "no close-up, no medium shot, no cropped feet, no face-only framing",
+  },
+  EWS: {
+    pos: "EXTREME WIDE SHOT. Composition: subject very small in frame (less than 1/4 of frame height), environment dominates",
+    neg: "no close-up, no face detail visible, no portrait framing",
+  },
+  INSERT: {
+    pos: "INSERT shot. Composition: macro extreme detail of specific object or hand action, no person face, no full body. Object/detail fills frame",
+    neg: "no full person, no face visible, no body, no portrait",
+  },
+  OTS: {
+    pos: "OVER-THE-SHOULDER shot. Composition: foreground figure's shoulder and back of head visible (out of focus, takes ~1/3 of frame edge), main subject in middle distance facing camera (in focus)",
+    neg: "no single isolated person, no centered close-up of one subject only, no full-body framing",
+  },
+};
+
+function getFramingDirective(framing: string): FramingDirective {
+  return FRAMING_DIRECTIVES[framing] ?? FRAMING_DIRECTIVES.MS;
+}
+
+const CAMERA_MOVE_DESCRIPTIONS: Record<string, string> = {
+  static: "",  // no need to mention
+  dolly_in: "camera dolly in, pushing toward subject for tension",
+  dolly_out: "camera dolly out, pulling back to reveal",
+  pan_left: "camera pan left, sweeping motion",
+  pan_right: "camera pan right, sweeping motion",
+  tilt_up: "camera tilts upward, revealing",
+  tilt_down: "camera tilts downward, revealing",
+  tracking: "tracking shot, camera follows subject in motion",
+  handheld: "handheld camera shake, gritty unstable feel",
+  crane: "crane shot, rising camera reveal",
+};
+
+/** Strip 4-view boilerplate AND keep only identity-defining sentences,
+ *  drop body proportions / scene posture / lighting / composition language. */
+function extractCharacterIdentity(charPrompt: string, maxChars = 180): string {
+  let s = charPrompt;
+  const stripPatterns = [
+    /character design sheet[^.]*\.?/gi,
+    /4-view turnaround[^.]*\.?/gi,
+    /left to right[^.]*\.?/gi,
+    /portrait closeup \+ front view[^.]*\.?/gi,
+    /neutral grey [^.]*\.?/gi,
+    /uniform soft lighting[^.]*\.?/gi,
+    /consistent across all four views[^.]*\.?/gi,
+    /full body head to toe[^.]*\.?/gi,
+    /full body, head to toe[^.]*\.?/gi,
+    /16:9[^.]*\.?/gi,
+    /no text[^.]*\.?/gi,
+    /no watermark[^.]*\.?/gi,
+    /7 heads tall[^.,]*[.,]?/gi,
+    /\d+\s*cm tall[^.,]*[.,]?/gi,
+    /\d+\s*heads tall proportion[^.,]*[.,]?/gi,
+    /standing in [^.]*\.?/gi,
+    /portrait shot from [^.]*\.?/gi,
+    /clean dark background[^.]*\.?/gi,
+    /cinematic lighting[^.]*\.?/gi,
+    /photorealistic[^.,]*[.,]?/gi,
+    /4K[^.,]*[.,]?/gi,
+    /shot on Sony[^.]*\.?/gi,
+    /vertical composition[^.]*\.?/gi,
+    /clean studio[^.]*\.?/gi,
+    /product shot[^.]*\.?/gi,
+    /sharp focus[^.,]*[.,]?/gi,
+    /high contrast[^.,]*[.,]?/gi,
+    /head to toe[^.,]*[.,]?/gi,
+  ];
+  for (const r of stripPatterns) s = s.replace(r, " ");
+  s = s.replace(/\s+/g, " ").replace(/[,.]\s*[,.]/g, ".").replace(/^[\s,.]+/, "").trim();
+  // Truncate
+  if (s.length > maxChars) {
+    // try cutting at sentence boundary
+    const cut = s.slice(0, maxChars);
+    const lastDot = Math.max(cut.lastIndexOf("."), cut.lastIndexOf(","));
+    s = lastDot > maxChars * 0.6 ? cut.slice(0, lastDot) : cut;
+  }
+  return s.trim();
+}
+
+function extractSceneAtmosphere(scenePrompt: string, maxChars = 160): string {
+  let s = scenePrompt;
+  const stripPatterns = [
+    /establishing shot of [^,]*,?/gi,
+    /no people[^,]*,?/gi,
+    /16:9[^.,]*[.,]?/gi,
+    /cinematic composition[^.,]*[.,]?/gi,
+    /photorealistic[^.,]*[.,]?/gi,
+    /4K[^.,]*[.,]?/gi,
+    /sharp focus[^.,]*[.,]?/gi,
+    /widescreen[^.,]*[.,]?/gi,
+    /no text[^.,]*[.,]?/gi,
+    /no watermark[^.,]*[.,]?/gi,
+  ];
+  for (const r of stripPatterns) s = s.replace(r, " ");
+  s = s.replace(/\s+/g, " ").trim();
+  if (s.length > maxChars) {
+    const cut = s.slice(0, maxChars);
+    const lastDot = Math.max(cut.lastIndexOf("."), cut.lastIndexOf(","));
+    s = lastDot > maxChars * 0.6 ? cut.slice(0, lastDot) : cut;
+  }
+  return s.trim();
+}
+
+/** Assemble shot image-gen prompt with **framing-first, emphatic, negative-cued** layout. */
 export function buildShotImageGenPrompt(args: {
-  shot: { framing: string; cameraMove: string; characters: string[]; action: string; imagePrompt?: string };
+  shot: {
+    framing: string; cameraMove: string;
+    characters: string[]; action: string;
+    imagePrompt?: string;
+    dialogue?: { character: string; line: string };
+  };
   project: Project;
   characterAssets: { name: string; prompt?: string }[];
   sceneAsset?: { prompt?: string };
 }): string {
   const { shot, project, characterAssets, sceneAsset } = args;
+  const directive = getFramingDirective(shot.framing);
+
   const parts: string[] = [];
+
+  // [1] FRAMING — first and bold
+  parts.push(directive.pos);
+
+  // [2] Camera move (only if not static)
+  const moveDesc = CAMERA_MOVE_DESCRIPTIONS[shot.cameraMove];
+  if (moveDesc) parts.push(moveDesc);
+
+  // [3] Shot-specific imagePrompt from LLM (should already be framing-aware)
   if (shot.imagePrompt) parts.push(shot.imagePrompt);
 
+  // [4] Action distilled
+  if (shot.action) parts.push(`Action: ${shot.action}`);
+
+  // [5] Subjects — identity only, NOT full description
   for (const charName of shot.characters) {
     const a = characterAssets.find(c => c.name === charName);
     if (a?.prompt) {
-      // Drop the layout boilerplate ("character design sheet, 4-view turnaround...")
-      // and pick the descriptive parts only.
-      const descOnly = a.prompt
-        .replace(/character design sheet[^.]*\./gi, "")
-        .replace(/4-view turnaround[^.]*\./gi, "")
-        .replace(/left to right[^.]*\./gi, "")
-        .replace(/neutral grey[^.]*\./gi, "")
-        .replace(/uniform soft lighting[^.]*\./gi, "")
-        .replace(/consistent across all four views[^.]*\./gi, "")
-        .replace(/full body head to toe[^.]*\./gi, "")
-        .replace(/16:9[^.]*\./gi, "")
-        .trim();
-      parts.push(`Character ${charName}: ${descOnly.split(".").slice(0, 6).join(".").trim()}`);
+      const identity = extractCharacterIdentity(a.prompt);
+      if (identity) parts.push(`Subject ${charName}: ${identity}`);
+    } else {
+      // no asset yet, just name
+      parts.push(`Subject: ${charName}`);
     }
   }
+
+  // [6] Setting — atmosphere only
   if (sceneAsset?.prompt) {
-    parts.push(`Setting: ${sceneAsset.prompt.split(".").slice(0, 4).join(".").trim()}`);
+    const atmo = extractSceneAtmosphere(sceneAsset.prompt);
+    if (atmo) parts.push(`Setting: ${atmo}`);
   }
 
-  const framingMap: Record<string, string> = {
-    ECU: "extreme close-up, only eyes or lips visible, intense focus",
-    CU: "close-up, face fills frame, emotional intensity",
-    MCU: "medium close-up, chest up framing, dialogue framing",
-    MS: "medium shot, waist up, interaction framing",
-    MLS: "medium long shot, knees up, relationship framing",
-    LS: "long shot, full body in frame, spatial context",
-    EWS: "extreme wide shot, environment dominates, establishing context",
-    INSERT: "macro detail insert shot, object detail",
-    OTS: "over-the-shoulder shot, subject seen past foreground shoulder",
-  };
-  parts.push(framingMap[shot.framing] || "medium shot");
+  // [7] Style
+  parts.push(`${project.tone}, ${project.genre} short drama mood, cinematic lighting`);
 
-  if (shot.cameraMove && shot.cameraMove !== "static") {
-    parts.push(`camera ${shot.cameraMove.replace(/_/g, " ")}`);
-  }
+  // [8] Technical
+  parts.push("9:16 vertical short drama frame, photorealistic, 4K");
 
-  parts.push(`${project.tone}, ${project.genre} short drama mood`);
-  parts.push("vertical 9:16 short drama frame, cinematic lighting, photorealistic, 4K, sharp focus, no text in image, no watermark");
-  return parts.filter(Boolean).join(". ");
+  // [9] NEGATIVE — explicit constraint to enforce framing
+  parts.push(directive.neg);
+  parts.push("no text in image, no watermark, no caption overlay");
+
+  return parts.join(". ");
 }
