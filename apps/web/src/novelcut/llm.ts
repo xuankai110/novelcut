@@ -129,8 +129,8 @@ export interface ImageOptions {
 }
 export interface ImageResult { url?: string; b64?: string; raw: unknown; }
 
-export async function imageGenerate(cfg: ImageConfig, opts: ImageOptions): Promise<ImageResult> {
-  const resp = await fetch("/nc/image/generate", {
+async function _imageGenerateOnce(cfg: ImageConfig, opts: ImageOptions): Promise<Response> {
+  return fetch("/nc/image/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -143,6 +143,16 @@ export async function imageGenerate(cfg: ImageConfig, opts: ImageOptions): Promi
     }),
     signal: opts.signal,
   });
+}
+
+export async function imageGenerate(cfg: ImageConfig, opts: ImageOptions): Promise<ImageResult> {
+  let resp = await _imageGenerateOnce(cfg, opts);
+  // Retry once on gateway errors after a small backoff — providers often self-heal in <30s
+  if ([502, 503, 504].includes(resp.status) && !opts.signal?.aborted) {
+    await new Promise(r => setTimeout(r, 8000));
+    if (!opts.signal?.aborted) resp = await _imageGenerateOnce(cfg, opts);
+  }
+  ;
   const text = await resp.text();
   if (!resp.ok) {
     let msg = text || `(空响应)`;

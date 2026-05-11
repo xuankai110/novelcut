@@ -58,9 +58,14 @@ export async function POST(req: NextRequest) {
 
     const text = await upstream.text();
     clearTimeout(timeoutId);
+    const upstreamCT = upstream.headers.get("Content-Type") ?? "";
+    if (!upstreamCT.includes("application/json") && (upstream.status >= 400 || /^<!?(?:DOCTYPE|html)/i.test(text.trim()))) {
+      const reason = extractHumanReadable(text, upstream.status);
+      return jsonError(upstream.status, `LLM 供应商 ${upstream.status} — ${reason}`);
+    }
     return new Response(text, {
       status: upstream.status,
-      headers: { "Content-Type": upstream.headers.get("Content-Type") ?? "application/json" },
+      headers: { "Content-Type": upstreamCT || "application/json" },
     });
   } catch (e: unknown) {
     clearTimeout(timeoutId);
@@ -71,6 +76,28 @@ export async function POST(req: NextRequest) {
     }
     return jsonError(502, `上游请求失败: ${errMsg}`);
   }
+}
+
+function extractHumanReadable(body: string, status: number): string {
+  const titleMatch = body.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const h1Match = body.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+  const centerMatch = body.match(/<center[^>]*>([^<]+)<\/center>/gi);
+  const parts: string[] = [];
+  if (titleMatch) parts.push(titleMatch[1].trim());
+  if (h1Match && h1Match[1].trim() !== titleMatch?.[1]?.trim()) parts.push(h1Match[1].trim());
+  if (centerMatch) {
+    for (const c of centerMatch) {
+      const inner = c.replace(/<[^>]+>/g, "").trim();
+      if (inner && !parts.includes(inner)) parts.push(inner);
+    }
+  }
+  const stripped = parts.length > 0
+    ? parts.join(" · ")
+    : body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
+  if (status === 502 || status === 503 || status === 504) {
+    return `${stripped} (供应商上游服务暂时不可达,建议过 30 秒重试)`;
+  }
+  return stripped || `HTTP ${status}`;
 }
 
 function jsonError(status: number, message: string) {

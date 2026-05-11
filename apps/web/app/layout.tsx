@@ -6,11 +6,11 @@ import '../src/index.css';
 export const metadata: Metadata = {
   title: 'NovelCut',
   icons: {
-    icon: '/app-icon.svg',
-    // Safari pinned-tab mask icon — Next.js's Metadata API doesn't have a
-    // dedicated `mask` field, so we surface it via the generic `other`
-    // bucket which renders as a raw <link rel="mask-icon" ...>.
-    other: [{ rel: 'mask-icon', url: '/app-icon.svg', color: '#363636' }],
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/app-icon.ico', type: 'image/x-icon' },
+    ],
+    shortcut: '/favicon.ico',
   },
 };
 
