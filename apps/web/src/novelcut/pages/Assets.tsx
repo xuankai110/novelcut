@@ -9,6 +9,7 @@ import type { VideoRatio, ImageQuality } from "../types";
 import { loadLLMConfig, loadImageConfig, LLMError } from "../llm";
 import { runAssetPrompt, runAssetImage } from "../agent/runner";
 import { SettingsDialog } from "../SettingsDialog";
+import { SafeImg } from "../SafeImg";
 
 const TABS: { id: AssetKind; label: string; ico: string; hint: string }[] = [
   { id: "char",  label: "角色", ico: "🧑", hint: "人物参考图 — 跨集复用" },
@@ -588,22 +589,20 @@ function AssetCard({ asset, onClick, onGenerate, onEdit, onDelete }: {
   asset: Asset; onClick: () => void; onGenerate: () => void; onEdit: () => void; onDelete: () => void;
 }) {
   const generating = asset.promptStatus === "running" || asset.imageStatus === "running";
-  const [imgBroken, setImgBroken] = useState(false);
   return (
     <div className="nc-asset-card" onClick={onClick}>
       <div className="nc-asset-thumb">
-        {asset.previewUrl && !imgBroken ? (
-          <img
+        {asset.previewUrl ? (
+          <SafeImg
             src={asset.previewUrl}
             alt={asset.name}
-            onError={() => setImgBroken(true)}
-            onLoad={() => setImgBroken(false)}
+            fallback={
+              <div className="nc-asset-broken">
+                <div style={{ fontSize: 24 }}>⚠</div>
+                <div style={{ fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>图已过期<br />请重新出图</div>
+              </div>
+            }
           />
-        ) : asset.previewUrl && imgBroken ? (
-          <div className="nc-asset-broken">
-            <div style={{ fontSize: 24 }}>⚠</div>
-            <div style={{ fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>图已过期<br />请重新出图</div>
-          </div>
         ) : generating ? (
           <div className="nc-asset-loading">
             <div style={{ fontSize: 24 }}>⏳</div>
@@ -658,8 +657,9 @@ function AssetDrawer({ asset, onClose, onEdit, onDelete, onGen }: {
 
         {asset.previewUrl ? (
           <a href={asset.previewUrl} target="_blank" rel="noreferrer" title="点击在新标签页查看原图">
-            <img src={asset.previewUrl} alt={asset.name}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "0.2"; (e.currentTarget as HTMLImageElement).title = "图已过期,请重新出图"; }}
+            <SafeImg
+              src={asset.previewUrl}
+              alt={asset.name}
               style={{
                 width: "100%",
                 maxHeight: "min(72vh, 800px)",
@@ -668,7 +668,20 @@ function AssetDrawer({ asset, onClose, onEdit, onDelete, onGen }: {
                 background: "#f4f2ed",
                 marginBottom: 14,
                 cursor: "zoom-in",
-              }} />
+              }}
+              fallback={
+                <div style={{
+                  width: "100%", height: 320, background: "#fee2e2",
+                  borderRadius: 8, marginBottom: 14,
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                  color: "#b91c1c",
+                }}>
+                  <div style={{ fontSize: 32 }}>⚠</div>
+                  <div style={{ marginTop: 8, fontSize: 13 }}>图已过期 · 请重新出图</div>
+                </div>
+              }
+            />
           </a>
         ) : (
           <div style={{ height: 320, background: "#f4f2ed", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", marginBottom: 14 }}>

@@ -8,6 +8,7 @@ import {
 import { loadLLMConfig, loadImageConfig, LLMError } from "../llm";
 import { runShotlist, normalizeShot, autoLinkAssetIds, runShotImage } from "../agent/runner";
 import { SettingsDialog } from "../SettingsDialog";
+import { SafeImg } from "../SafeImg";
 
 const FRAMING_LABELS: Record<string, string> = {
   ECU: "极特", CU: "特写", MCU: "中近", MS: "中景", MLS: "中远",
@@ -538,15 +539,21 @@ function ShotCard({ shot, assets, onClick }: { shot: Shot; assets: Asset[]; onCl
     <div className="nc-shot-card" onClick={onClick}>
       <div className="nc-shot-thumb">
         {shot.imageUrl ? (
-          <img
+          <SafeImg
             src={shot.imageUrl}
             alt={`${shot.sceneIndex}-${shot.shotIndex}`}
-            onError={(e) => {
-              const el = e.currentTarget as HTMLImageElement;
-              el.style.display = "none";
-              const sib = el.parentElement?.querySelector(".nc-shot-broken-fallback") as HTMLElement | null;
-              if (sib) sib.style.display = "flex";
-            }}
+            fallback={
+              <div style={{
+                display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center",
+                width: "100%", height: "100%",
+                background: "#fee2e2", color: "#b91c1c",
+                textAlign: "center", padding: 8,
+              }}>
+                <div style={{ fontSize: 22 }}>⚠</div>
+                <div style={{ fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>图已过期<br />请重新出图</div>
+              </div>
+            }
           />
         ) : shot.imageStatus === "running" ? (
           <div className="nc-shot-loading">⏳<div style={{ fontSize: 10, marginTop: 4 }}>出图中</div></div>
@@ -564,12 +571,6 @@ function ShotCard({ shot, assets, onClick }: { shot: Shot; assets: Asset[]; onCl
           <span className="nc-shot-duration">{shot.duration.toFixed(1)}s</span>
           {shot.cameraMove !== "static" && <span className="nc-shot-move">{MOVE_LABELS[shot.cameraMove] ?? shot.cameraMove}</span>}
         </div>
-        {shot.imageUrl && (
-          <div className="nc-shot-broken-fallback" style={{ display: "none", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "absolute", inset: 0, background: "#fee2e2", color: "#b91c1c", textAlign: "center", padding: 8 }}>
-            <div style={{ fontSize: 22 }}>⚠</div>
-            <div style={{ fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>图已过期<br />请重新出图</div>
-          </div>
-        )}
         {shot.imageStatus === "error" && <div className="nc-shot-error-pill">✗</div>}
       </div>
       <div className="nc-shot-meta">
@@ -645,14 +646,14 @@ function ShotDrawer({
           <div className="nc-shot-drawer-image">
             {edited.imageUrl ? (
               <a href={edited.imageUrl} target="_blank" rel="noreferrer" title="点击新标签页看原图">
-                <img
+                <SafeImg
                   src={edited.imageUrl}
                   alt={`${edited.sceneIndex}-${edited.shotIndex}`}
-                  onError={(e) => {
-                    const el = e.currentTarget as HTMLImageElement;
-                    el.style.opacity = "0.2";
-                    el.title = "图已过期,请重新出图";
-                  }}
+                  fallback={
+                    <div className="nc-shot-drawer-empty" style={{ background: "#fee2e2", color: "#b91c1c" }}>
+                      ⚠ 图已过期 · 请重新出图
+                    </div>
+                  }
                 />
               </a>
             ) : (
