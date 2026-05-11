@@ -3,7 +3,8 @@ import type {
   ScriptScene, StorySkeleton, SkeletonProvenance,
 } from "../types";
 import {
-  chat, extractJson, imageGenerate, type LLMConfig, type ImageConfig,
+  chat, extractJson, imageGenerate, resolveStableImageUrl,
+  type LLMConfig, type ImageConfig,
 } from "../llm";
 import { getVideoRatio, getImageQuality, ratioToPixelSize } from "../projectMeta";
 import {
@@ -197,18 +198,18 @@ export async function runAssetImage(
 ): Promise<{ url?: string; b64?: string }> {
   if (!asset.prompt) throw new Error("资产缺少 prompt — 请先生成提示词");
   const quality = getImageQuality(project);
-  // Toonflow-aligned: ALL asset reference images are 16:9 (4-view char sheet,
-  // 2-state prop sheet, establishing scene shot all benefit from wide layout).
-  // Project.videoRatio kicks in later at storyboard/video generation.
   const ASSET_REF_RATIO = "16:9" as const;
   const useAR = img.useAspectRatio;
   const result = await imageGenerate(img, {
     prompt: asset.prompt,
     size: useAR ? undefined : (opts.size ?? ratioToPixelSize(ASSET_REF_RATIO, quality)),
     aspectRatio: useAR ? (opts.aspectRatio ?? ASSET_REF_RATIO) : undefined,
+    responseFormat: "b64_json",
     signal: opts.signal,
   });
-  return { url: result.url, b64: result.b64 };
+  // Persist to server cache so the URL stays stable past provider expiry.
+  const stableUrl = await resolveStableImageUrl(result);
+  return { url: stableUrl, b64: result.b64 };
 }
 
 
@@ -323,7 +324,9 @@ export async function runShotImage(
     prompt: finalPrompt,
     size: useAR ? undefined : ratioToPixelSize(ratio, quality),
     aspectRatio: useAR ? ratio : undefined,
+    responseFormat: "b64_json",
     signal: opts.signal,
   });
-  return { url: result.url, b64: result.b64 };
+  const stableUrl = await resolveStableImageUrl(result);
+  return { url: stableUrl, b64: result.b64 };
 }

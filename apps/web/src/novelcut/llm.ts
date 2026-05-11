@@ -122,6 +122,9 @@ export interface ImageOptions {
   prompt: string;
   size?: string;
   aspectRatio?: string;
+  /** "b64_json" (default — survives URL expiry, gets cached on server)
+   *  or "url" (let provider return a CDN URL — may expire) */
+  responseFormat?: "b64_json" | "url";
   signal?: AbortSignal;
 }
 export interface ImageResult { url?: string; b64?: string; raw: unknown; }
@@ -135,6 +138,7 @@ export async function imageGenerate(cfg: ImageConfig, opts: ImageOptions): Promi
       prompt: opts.prompt,
       size: opts.size,
       aspectRatio: opts.aspectRatio,
+      responseFormat: opts.responseFormat ?? "b64_json",
       n: 1,
     }),
     signal: opts.signal,
@@ -154,4 +158,39 @@ export async function imageGenerate(cfg: ImageConfig, opts: ImageOptions): Promi
   const b64 = typeof data.b64_json === "string" ? data.b64_json : undefined;
   if (!url && !b64) throw new LLMError(500, "图像响应中既无 url 也无 b64_json");
   return { url, b64, raw: json };
+}
+
+
+/** Persist an image to the server cache.
+ *  Pass either b64 (preferred — comes from b64_json response) or a remote URL we re-fetch.
+ *  Returns a stable local URL like "/nc/image/cache/<hash>.<ext>". */
+export async function cacheImage(args: { b64?: string; mimeType?: string; remoteUrl?: string }): Promise<string> {
+  const resp = await fetch("/nc/image/cache", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+  const text = await resp.text();
+  if (!resp.ok) {
+    let msg = text;
+    try { const j = JSON.parse(text); msg = j?.error?.message ?? msg; } catch {}
+    throw new Error(`cacheImage failed [${resp.status}]: ${msg}`);
+  }
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error("cacheImage: non-JSON response"); }
+  if (!json?.url) throw new Error("cacheImage: response missing url");
+  return json.url as string;
+}
+
+/** Best-effort: take whatever the image API returned (b64 or remote URL) and turn it into a stable local URL.
+ *  Falls back to the raw remote URL if caching fails (so existing flow still works). */
+export async function resolveStableImageUrl(r: ImageResult): Promise<string | undefined> {
+  try {
+    if (r.b64) return await cacheImage({ b64: r.b64 });
+    if (r.url) return await cacheImage({ remoteUrl: r.url });
+    return undefined;
+  } catch (e) {
+    console.warn("[novelcut] image cache failed, using raw URL:", e);
+    return r.url ?? (r.b64 ? `data:image/png;base64,${r.b64}` : undefined);
+  }
 }

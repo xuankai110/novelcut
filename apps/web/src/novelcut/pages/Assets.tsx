@@ -588,11 +588,22 @@ function AssetCard({ asset, onClick, onGenerate, onEdit, onDelete }: {
   asset: Asset; onClick: () => void; onGenerate: () => void; onEdit: () => void; onDelete: () => void;
 }) {
   const generating = asset.promptStatus === "running" || asset.imageStatus === "running";
+  const [imgBroken, setImgBroken] = useState(false);
   return (
     <div className="nc-asset-card" onClick={onClick}>
       <div className="nc-asset-thumb">
-        {asset.previewUrl ? (
-          <img src={asset.previewUrl} alt={asset.name} />
+        {asset.previewUrl && !imgBroken ? (
+          <img
+            src={asset.previewUrl}
+            alt={asset.name}
+            onError={() => setImgBroken(true)}
+            onLoad={() => setImgBroken(false)}
+          />
+        ) : asset.previewUrl && imgBroken ? (
+          <div className="nc-asset-broken">
+            <div style={{ fontSize: 24 }}>⚠</div>
+            <div style={{ fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>图已过期<br />请重新出图</div>
+          </div>
         ) : generating ? (
           <div className="nc-asset-loading">
             <div style={{ fontSize: 24 }}>⏳</div>
@@ -648,6 +659,7 @@ function AssetDrawer({ asset, onClose, onEdit, onDelete, onGen }: {
         {asset.previewUrl ? (
           <a href={asset.previewUrl} target="_blank" rel="noreferrer" title="点击在新标签页查看原图">
             <img src={asset.previewUrl} alt={asset.name}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "0.2"; (e.currentTarget as HTMLImageElement).title = "图已过期,请重新出图"; }}
               style={{
                 width: "100%",
                 maxHeight: "min(72vh, 800px)",
