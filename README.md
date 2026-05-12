@@ -343,7 +343,7 @@ novelcut/
 
 如果你正在做类似的 AI 短剧管线,欢迎在 [Issues](https://github.com/xuankai110/novelcut/issues) 或 [Discussions](https://github.com/xuankai110/novelcut/discussions) 交流。
 
-
+- 作者邮箱：5966381@qq.com
 ---
 
 
