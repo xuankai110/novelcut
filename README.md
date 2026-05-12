@@ -337,7 +337,7 @@ novelcut/
 
 欢迎企业或个人赞助支持持续开发，也可洽谈定制、集成或商务合作。
 
-如果你正在做类似的 AI 短剧管线,欢迎交流:5966381@qq.com
+如果你正在做类似的 AI 短剧管线,欢迎在 [Issues](https://github.com/xuankai110/novelcut/issues) 或 [Discussions](https://github.com/xuankai110/novelcut/discussions) 交流。
 
 
 ---
