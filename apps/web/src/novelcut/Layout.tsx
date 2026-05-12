@@ -74,7 +74,7 @@ export function Layout({ route, children }: { route: Route; children: ReactNode 
               }} />
             )}
           </button>
-          <a className="nc-btn" href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
+          <a className="nc-btn" href="https://github.com/xuankai110/novelcut" target="_blank" rel="noreferrer">GitHub</a>
         </div>
       </header>
       {children}

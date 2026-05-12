@@ -43,7 +43,9 @@ function resolveDevTsconfigPath() {
 const DEV_TSCONFIG_PATH = resolveDevTsconfigPath();
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['127.0.0.1', '115.159.222.245', 'localhost'],
+  // To access the dev server from a non-localhost origin (e.g. a remote VPS
+  // tunnel), set NEXT_PUBLIC_DEV_HOST=your.host.or.ip when launching `pnpm dev`.
+  allowedDevOrigins: ['127.0.0.1', 'localhost', ...(process.env.NEXT_PUBLIC_DEV_HOST ? [process.env.NEXT_PUBLIC_DEV_HOST] : [])],
   outputFileTracingRoot: WORKSPACE_ROOT,
   reactStrictMode: true,
   turbopack: {
