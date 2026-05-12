@@ -1,0 +1,48 @@
+name: 🐛 Bug report
+description: 报告一个具体可复现的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢花时间反馈!请尽量提供可复现步骤,这样定位会快很多。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象 / What happened
+      description: 实际发生了什么?
+      placeholder: 例如:点击"重新出图"后,图标变 ⚠ 但状态没刷新
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期 / Expected behavior
+      placeholder: 应该显示新生成的图
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1. 打开 /assets
+        2. 点击任一资产 → 重新生成
+        3. 等待完成
+        4. ...
+    validations: { required: true }
+  - type: input
+    id: env-node
+    attributes:
+      label: Node 版本
+      placeholder: "v22.x"
+  - type: input
+    id: env-os
+    attributes:
+      label: 操作系统
+      placeholder: "Ubuntu 22.04 / macOS 14 / Windows 11"
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / Logs
+      description: 浏览器 Console 报错 + 服务端 .tmp/tools-dev/.../web/latest.log 相关片段
+      render: shell

@@ -1,0 +1,20 @@
+NovelCut
+Copyright 2026 NovelCut contributors
+
+This product includes software derived from:
+
+* Open Design (https://github.com/nexu-io/open-design)
+  Copyright Open Design contributors
+  Licensed under the Apache License, Version 2.0.
+  NovelCut reuses the workbench scaffolding (Next.js + Express daemon
+  monorepo layout, design-system primitives, packaging conventions).
+
+It is also conceptually inspired by:
+
+* Toonflow (https://github.com/HBAI-Ltd/Toonflow-app)
+  No code is copied from Toonflow. NovelCut independently re-implements
+  the short-drama production ideas (event extraction, story skeleton,
+  episode planning, asset visual manual, shot framing taxonomy).
+
+For the avoidance of doubt, NovelCut as a whole is distributed under the
+Apache License, Version 2.0 (see LICENSE).
