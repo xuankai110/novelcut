@@ -29,6 +29,25 @@ NovelCut is an open-source AI short-drama production workbench. Feed it a novel,
 - **Prompts as Markdown**: all skill templates are editable .md files, no rebuild needed
 - **Multi-language**: dialogues auto-written in project language (zh-CN / ru-RU / en-US / etc.)
 
+## Preview
+
+> NovelCut centralises the whole "novel → events → script → assets → storyboard" pipeline in one workbench. Screenshots of each stage:
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/preview/01-novel.png" alt="Import Novel" /><br/><sub><b>1. Import Novel</b></sub></td>
+    <td align="center" width="25%"><img src="docs/preview/02-events.png" alt="Events Graph" /><br/><sub><b>2. Events Graph</b></sub></td>
+    <td align="center" width="25%"><img src="docs/preview/03-skeleton.png" alt="Story Skeleton" /><br/><sub><b>3. Story Skeleton</b></sub></td>
+    <td align="center" width="25%"><img src="docs/preview/04-episodes.png" alt="Episode Plan" /><br/><sub><b>4. Episode Plan</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/preview/05-script.png" alt="Script" /><br/><sub><b>5. Script</b></sub></td>
+    <td align="center" width="25%"><img src="docs/preview/06-assets.png" alt="Assets" /><br/><sub><b>6. Assets</b></sub></td>
+    <td align="center" width="25%"><img src="docs/preview/07-storyboard.png" alt="Storyboard" /><br/><sub><b>7. Storyboard</b></sub></td>
+    <td align="center" width="25%"><img src="docs/preview/08-settings.png" alt="Settings" /><br/><sub><b>8. Settings</b></sub></td>
+  </tr>
+</table>
+
 ## Pipeline (7 stages)
 
 ```
