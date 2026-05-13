@@ -240,17 +240,14 @@ novelcut/
 │   │       ├── PipelineStepper.tsx
 │   │       └── ...
 │   └── daemon/                    # 上游 open-design daemon (legacy,目前不强依赖)
-├── packages/
-│   ├── canvas/                    # @xyflow/react 画布组件 (预留)
-│   ├── event-graph/               # 章节事件图谱 (Toonflow-inspired)
-│   ├── agent-trio/                # 三层 Agent 协议 (Toonflow-inspired)
-│   ├── memory/                    # 语义记忆 (Toonflow-inspired,ONNX 向量)
-│   ├── vendor/                    # 可编程供应商系统
-│   └── skill-loader/              # Markdown Skill 加载
-├── skills/                        # 10 个短剧管线 Skill 占位 (Markdown)
+├── packages/                      # 上游 open-design 共享包 (contracts/sidecar/platform)
 ├── design-systems/                # 15 个精选视觉风格 (Markdown DESIGN.md)
 └── docs/
 ```
+
+> **关于 packages/ 架构**:之前的 README 里画过 6 个"@novelcut/* 预埋包"(canvas / event-graph / agent-trio / memory / vendor / skill-loader),
+> 但它们当前都没有实际实现,只是设计意图占位。为避免误导,已在 commit 中删除;
+> 当前所有业务逻辑都集中在 `apps/web/src/novelcut/`。若将来需要拆包,会重新规划并落地实现再写进 README。
 
 ### 关键设计决策
 
@@ -262,7 +259,7 @@ novelcut/
 | 拆镜 UI | 时间线网格 | 短剧线性 + 高 volume,画布找不到东西 |
 | 资产参考图 | 16:9 横版四视图 | 跨镜一致性的"锚点",分镜按项目画幅再裁 |
 | 错误重试 | 5xx + 400/422 含 load-shedding 关键词 | 兼容国内 API 网关用 400 表达"我太忙"的非标行为 |
-| 提示词模板 | Markdown Skill 文件 (外置) | 可热改,无需重启,沿用 Claude Code Skill 协议 |
+| 提示词模板 | 集中在 `apps/web/src/novelcut/agent/prompts.ts` | 一处修改,所有阶段生效 |
 
 ### 技术栈
 

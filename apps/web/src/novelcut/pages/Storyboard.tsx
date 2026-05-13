@@ -231,6 +231,7 @@ export function StoryboardTab({ project }: { project: Project }) {
     for (let i = 0; i < targets.length; i++) {
       if (ac.signal.aborted) break;
       const sh = targets[i];
+      if (!sh) continue;
       setRunning({ kind: "batch", total: targets.length, done: i, label: `出图 ${sh.sceneIndex}-${sh.shotIndex}` });
       try { await generateShotImage(sh, ac, { silent: true }); }
       catch {}
@@ -248,6 +249,7 @@ export function StoryboardTab({ project }: { project: Project }) {
     for (let i = 0; i < targets.length; i++) {
       if (ac.signal.aborted) break;
       const sh = targets[i];
+      if (!sh) continue;
       setRunning({ kind: "batch", total: targets.length, done: i, label: `出图 ${sh.sceneIndex}-${sh.shotIndex}` });
       try { await generateShotImage(sh, ac, { silent: true }); } catch {}
     }
