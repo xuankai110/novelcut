@@ -454,7 +454,7 @@ const FRAMING_DIRECTIVES: Record<string, FramingDirective> = {
 };
 
 function getFramingDirective(framing: string): FramingDirective {
-  return FRAMING_DIRECTIVES[framing] ?? FRAMING_DIRECTIVES.MS;
+  return FRAMING_DIRECTIVES[framing] ?? FRAMING_DIRECTIVES.MS!;
 }
 
 const CAMERA_MOVE_DESCRIPTIONS: Record<string, string> = {

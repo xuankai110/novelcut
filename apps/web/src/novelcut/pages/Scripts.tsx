@@ -82,6 +82,7 @@ export function ScriptsTab({ project }: { project: Project }) {
     for (let i = 0; i < pending.length; i++) {
       if (ac.signal.aborted) break;
       const ep = pending[i];
+      if (!ep) continue;
       setBatchProgress({ done: i, total: pending.length, label: `扩写 EP${String(ep.index).padStart(2, "0")} · ${ep.title}` });
       try {
         const prev = episodes.find(e => e.index === ep.index - 1);

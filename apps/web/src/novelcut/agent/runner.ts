@@ -15,7 +15,7 @@ import {
   SHOTLIST_SYSTEM, buildShotlistUser, buildShotImageGenPrompt,
   type ShotlistContext,
 } from "./prompts";
-import type { Asset, Shot, ShotFraming, ShotCameraMove } from "../types";
+import type { Shot, ShotFraming, ShotCameraMove } from "../types";
 
 export interface RunSkeletonResult { skeleton: StorySkeleton; raw: string; }
 

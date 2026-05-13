@@ -73,13 +73,16 @@ export function WelcomeTour({ project, onClose }: { project: Project; onClose: (
         </div>
 
         <div style={{ minHeight: 160, padding: "8px 0 16px" }}>
-          <div style={{ fontSize: 36, marginBottom: 8 }}>{STEPS[step].ico}</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8 }}>
-            {STEPS[step].title}
-          </div>
-          <div style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.7 }}>
-            {STEPS[step].body}
-          </div>
+          {(() => {
+            const cur = STEPS[step]!;
+            return (
+              <>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>{cur.ico}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8 }}>{cur.title}</div>
+                <div style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.7 }}>{cur.body}</div>
+              </>
+            );
+          })()}
         </div>
 
         <div className="nc-modal-foot">

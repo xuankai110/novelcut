@@ -114,7 +114,7 @@ export function extractJson<T = unknown>(content: string): T {
   const cleaned = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
   try { return JSON.parse(cleaned) as T; } catch {}
   const m = cleaned.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
-  if (m) { try { return JSON.parse(m[1]) as T; } catch {} }
+  if (m && m[1]) { try { return JSON.parse(m[1]) as T; } catch {} }
   throw new Error("LLM 返回内容中找不到合法 JSON");
 }
 

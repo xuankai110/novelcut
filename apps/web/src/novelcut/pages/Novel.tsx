@@ -87,6 +87,7 @@ export function NovelTab({ project }: { project: Project }) {
     for (let i = 0; i < working.length; i++) {
       if (cancelRef.current) break;
       const ch = working[i];
+      if (!ch) continue;
       working = working.map((c) => c.id === ch.id ? { ...c, eventsStatus: "running" as const } : c);
       persist(working);
       const taskId = genId("task");

@@ -81,8 +81,8 @@ function extractHumanReadable(body: string, status: number): string {
   const h1Match = body.match(/<h1[^>]*>([^<]+)<\/h1>/i);
   const centerMatch = body.match(/<center[^>]*>([^<]+)<\/center>/gi);
   const parts: string[] = [];
-  if (titleMatch) parts.push(titleMatch[1].trim());
-  if (h1Match && h1Match[1].trim() !== titleMatch?.[1]?.trim()) parts.push(h1Match[1].trim());
+  if (titleMatch?.[1]) parts.push(titleMatch[1].trim());
+  if (h1Match?.[1] && h1Match[1].trim() !== titleMatch?.[1]?.trim()) parts.push(h1Match[1].trim());
   if (centerMatch) {
     for (const c of centerMatch) {
       const inner = c.replace(/<[^>]+>/g, "").trim();

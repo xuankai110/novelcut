@@ -175,6 +175,7 @@ export function AssetsTab({ project }: { project: Project }) {
     for (let i = 0; i < targets.length; i++) {
       if (ac.signal.aborted) break;
       const a = targets[i];
+      if (!a) continue;
       setBatchProgress({ done: i, total: targets.length, label: `${kindLabel(a.kind)} · ${a.name}` });
       try {
         let cur = a;
@@ -452,7 +453,6 @@ export function AssetsTab({ project }: { project: Project }) {
               });
             }
             setAssetsState(next);
-            (cur => cur).call(null);  // satisfy lint
             for (const n of next.slice(cur.length)) upsertAsset(n);
             setShowImport(false);
           }}

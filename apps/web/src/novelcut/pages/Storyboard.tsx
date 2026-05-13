@@ -61,7 +61,7 @@ export function StoryboardTab({ project }: { project: Project }) {
     const map: Record<string, Shot[]> = {};
     for (const s of selectedEpShots) {
       if (!map[s.sceneIndex]) map[s.sceneIndex] = [];
-      map[s.sceneIndex].push(s);
+      map[s.sceneIndex]!.push(s);
     }
     return map;
   }, [selectedEpShots]);
@@ -160,6 +160,7 @@ export function StoryboardTab({ project }: { project: Project }) {
     for (let i = 0; i < scenes.length; i++) {
       if (ac.signal.aborted) break;
       const sc = scenes[i];
+      if (!sc) continue;
       setRunning({ kind: "shotlist", total: scenes.length, done: i, label: `拆镜 场 ${sc.index}` });
       try { await shotlistOneScene(selectedEp, sc, ac, { silent: true }); }
       catch {} // continue to next scene

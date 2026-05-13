@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       const r = await fetch(body.remoteUrl, { signal: AbortSignal.timeout(30_000) });
       if (!r.ok) return jsonError(502, `upstream fetch ${r.status}`);
       const ct = r.headers.get("content-type") ?? "image/png";
-      mime = ct.split(";")[0].trim();
+      mime = ct.split(";")[0]!.trim();
       buf = Buffer.from(await r.arrayBuffer());
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e);

@@ -22,7 +22,7 @@ function parseHash(hash: string): Route {
   const h = hash.replace(/^#\/?/, "");
   if (!h) return { kind: "home" };
   const m = h.match(/^p\/([^/]+)(?:\/([^/]+))?\/?$/);
-  if (m) return { kind: "project", id: m[1], tab: m[2] ?? "novel" };
+  if (m && m[1]) return { kind: "project", id: m[1], tab: m[2] ?? "novel" };
   return { kind: "home" };
 }
 
