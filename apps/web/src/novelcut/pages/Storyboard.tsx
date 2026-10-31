@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Project, Episode, EpisodeScript, ScriptScene, Shot, Asset } from "../types";
+import type { Project, Episode, EpisodeScript, ScriptScene, Shot, Asset, DialogueIR, AudioNote } from "../types";
 import {
   listEpisodes, listScripts, listAssets, listShots, listShotsByEpisode,
   listShotsByScene, upsertShots, upsertShot, deleteShot, deleteShotsByScene,
@@ -9,6 +9,7 @@ import { loadLLMConfig, loadImageConfig, LLMError } from "../llm";
 import { runShotlist, normalizeShot, autoLinkAssetIds, runShotImage } from "../agent/runner";
 import { SettingsDialog } from "../SettingsDialog";
 import { SafeImg } from "../SafeImg";
+import { compileShot } from "../production/compiler";
 
 const FRAMING_LABELS: Record<string, string> = {
   ECU: "极特", CU: "特写", MCU: "中近", MS: "中景", MLS: "中远",
@@ -21,6 +22,12 @@ const MOVE_LABELS: Record<string, string> = {
 };
 const FRAMING_OPTIONS = Object.keys(FRAMING_LABELS);
 const MOVE_OPTIONS = Object.keys(MOVE_LABELS);
+const VOICE_LABELS: Record<string, string> = {
+  on_screen: "画内对白", off_screen: "画外音", inner: "内心独白", narration: "旁白", flashback: "回忆人声",
+};
+const RISK_LABELS: Record<string, string> = {
+  multi_character: "多人同框", complex_action: "动作复杂", physics_simulation: "物理模拟", long_dialogue: "台词超时",
+};
 
 export function StoryboardTab({ project }: { project: Project }) {
   const [episodes] = useState<Episode[]>(() => listEpisodes(project.id));
@@ -170,7 +177,13 @@ export function StoryboardTab({ project }: { project: Project }) {
 
   const generateShotImage = async (shot: Shot, ac: AbortController, opts?: { silent?: boolean }) => {
     if (!img) return;
-    upsertShot({ ...shot, imageStatus: "running", imageError: undefined });
+    const attempted: Shot = {
+      ...shot,
+      imageStatus: "running",
+      imageError: undefined,
+      attempts: { image: (shot.attempts?.image ?? 0) + 1, video: shot.attempts?.video ?? 0 },
+    };
+    upsertShot(attempted);
     setAllShots(listShots(project.id));
     const taskId = genId("task");
     appendTask({
@@ -186,7 +199,7 @@ export function StoryboardTab({ project }: { project: Project }) {
       const r = await runShotImage(img, project, shot, charAssets, sceneAsset, { signal: ac.signal });
       const url = r.url ?? (r.b64 ? `data:image/png;base64,${r.b64}` : undefined);
       const updated: Shot = {
-        ...shot, imageUrl: url, imageStatus: "done", imageError: undefined,
+        ...attempted, imageUrl: url, imageStatus: "done", imageError: undefined,
         imageGeneratedAt: Date.now(),
       };
       upsertShot(updated);
@@ -199,7 +212,7 @@ export function StoryboardTab({ project }: { project: Project }) {
       return updated;
     } catch (e) {
       const msg = e instanceof LLMError ? `[${e.status}] ${e.message}` : String((e as Error).message ?? e);
-      upsertShot({ ...shot, imageStatus: "error", imageError: msg });
+      upsertShot({ ...attempted, imageStatus: "error", imageError: msg });
       setAllShots(listShots(project.id));
       if (!opts?.silent) setError(msg);
       appendTask({
@@ -538,6 +551,10 @@ function SceneStrip({
 
 function ShotCard({ shot, assets, onClick }: { shot: Shot; assets: Asset[]; onClick: () => void }) {
   const linked = assets.filter(a => shot.associatedAssetIds.includes(a.id));
+  const firstDialogue = shot.dialogues?.[0] ?? (shot.dialogue ? {
+    speaker: shot.dialogue.character,
+    text: shot.dialogue.line,
+  } : undefined);
   return (
     <div className="nc-shot-card" onClick={onClick}>
       <div className="nc-shot-thumb">
@@ -577,13 +594,19 @@ function ShotCard({ shot, assets, onClick }: { shot: Shot; assets: Asset[]; onCl
         {shot.imageStatus === "error" && <div className="nc-shot-error-pill">✗</div>}
       </div>
       <div className="nc-shot-meta">
-        {shot.dialogue?.line ? (
+        {firstDialogue?.text ? (
           <div className="nc-shot-dialogue">
-            <strong>{shot.dialogue.character}: </strong>
-            <span>{shot.dialogue.line.length > 28 ? shot.dialogue.line.slice(0, 28) + "…" : shot.dialogue.line}</span>
+            <strong>{firstDialogue.speaker}: </strong>
+            <span>{firstDialogue.text.length > 28 ? firstDialogue.text.slice(0, 28) + "…" : firstDialogue.text}</span>
+            {(shot.dialogues?.length ?? 0) > 1 && <span> +{shot.dialogues!.length - 1}</span>}
           </div>
         ) : (
           <div className="nc-shot-action">{shot.action.length > 36 ? shot.action.slice(0, 36) + "…" : shot.action}</div>
+        )}
+        {(shot.riskFlags?.length ?? 0) > 0 && (
+          <div className="nc-shot-assets">
+            {shot.riskFlags!.map(flag => <span key={flag} className="nc-pill" style={{ fontSize: 9, color: "#b45309" }}>⚠ {RISK_LABELS[flag] ?? flag}</span>)}
+          </div>
         )}
         {linked.length > 0 && (
           <div className="nc-shot-assets">
@@ -617,9 +640,21 @@ function ShotDrawer({
 
   const linkedAssets = assets.filter(a => edited.associatedAssetIds.includes(a.id));
   const unlinkedAssets = assets.filter(a => !edited.associatedAssetIds.includes(a.id));
+  const previewClips = compileShot(edited, assets);
 
   const update = (patch: Partial<Shot>) => setEdited({ ...edited, ...patch, updatedAt: Date.now() });
   const save = () => { onChange(edited); };
+
+  const updateDialogues = (dialogues: DialogueIR[]) => update({
+    dialogues,
+    dialogue: dialogues[0] ? { character: dialogues[0].speaker, line: dialogues[0].text } : undefined,
+  });
+  const patchDialogue = (index: number, patch: Partial<DialogueIR>) => {
+    updateDialogues((edited.dialogues ?? []).map((item, i) => i === index ? { ...item, ...patch } : item));
+  };
+  const updateAudioNote = (index: number, note: AudioNote) => {
+    update({ audioNotes: (edited.audioNotes ?? []).map((item, i) => i === index ? note : item) });
+  };
 
   const toggleAsset = (assetId: string) => {
     const has = edited.associatedAssetIds.includes(assetId);
@@ -694,10 +729,10 @@ function ShotDrawer({
               <div className="nc-form-row">
                 <label className="nc-label">duration 秒数</label>
                 <input
-                  type="number" step="0.5" min={1.5} max={5}
+                  type="number" step="0.5" min={1.5} max={6}
                   className="nc-input"
                   value={edited.duration}
-                  onChange={(e) => update({ duration: Math.max(1.5, Math.min(5, parseFloat(e.target.value || "3"))) })}
+                  onChange={(e) => update({ duration: Math.max(1.5, Math.min(6, parseFloat(e.target.value || "3"))) })}
                 />
               </div>
               <div className="nc-form-row">
@@ -710,8 +745,43 @@ function ShotDrawer({
               </div>
             </div>
 
+            <div className="nc-form-grid">
+              <div className="nc-form-row">
+                <label className="nc-label">机位视角</label>
+                <select className="nc-select" value={edited.cameraAngle ?? "eye"} onChange={(e) => update({ cameraAngle: e.target.value as Shot["cameraAngle"] })}>
+                  <option value="eye">eye — 平视</option>
+                  <option value="high">high — 俯拍</option>
+                  <option value="low">low — 仰拍</option>
+                  <option value="dutch">dutch — 荷兰角</option>
+                  <option value="top">top — 顶拍</option>
+                </select>
+              </div>
+              <div className="nc-form-row">
+                <label className="nc-label">叙事视角</label>
+                <select className="nc-select" value={edited.narrativePov ?? "objective"} onChange={(e) => update({ narrativePov: e.target.value as Shot["narrativePov"] })}>
+                  <option value="objective">objective — 客观</option>
+                  <option value="character">character — 角色主观</option>
+                  <option value="flashback">flashback — 回忆</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="nc-form-grid">
+              <div className="nc-form-row">
+                <label className="nc-label">表演情绪</label>
+                <input className="nc-input" placeholder="如：隐忍震惊" value={edited.emotion ?? ""} onChange={(e) => update({ emotion: e.target.value || undefined })} />
+              </div>
+              <div className="nc-form-row">
+                <label className="nc-label">站位 / 朝向</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input className="nc-input" placeholder="站位" value={edited.blocking?.positions ?? ""} onChange={(e) => update({ blocking: { count: edited.blocking?.count ?? edited.characters.length, positions: e.target.value || undefined, facing: edited.blocking?.facing } })} />
+                  <input className="nc-input" placeholder="朝向" value={edited.blocking?.facing ?? ""} onChange={(e) => update({ blocking: { count: edited.blocking?.count ?? edited.characters.length, positions: edited.blocking?.positions, facing: e.target.value || undefined } })} />
+                </div>
+              </div>
+            </div>
+
             <div className="nc-form-row">
-              <label className="nc-label">动作描述</label>
+              <label className="nc-label">动作描述 (只保留一个主动作)</label>
               <textarea
                 className="nc-textarea" style={{ minHeight: 70 }}
                 value={edited.action}
@@ -720,36 +790,101 @@ function ShotDrawer({
             </div>
 
             <div className="nc-form-row">
-              <label className="nc-label">台词 (可选)</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  className="nc-input"
-                  placeholder="人物名"
-                  style={{ maxWidth: 160 }}
-                  value={edited.dialogue?.character ?? ""}
-                  onChange={(e) => update({
-                    dialogue: { character: e.target.value, line: edited.dialogue?.line ?? "" },
-                  })}
-                />
-                <input
-                  className="nc-input"
-                  placeholder="台词内容"
-                  value={edited.dialogue?.line ?? ""}
-                  onChange={(e) => update({
-                    dialogue: { character: edited.dialogue?.character ?? "", line: e.target.value },
-                  })}
-                />
+              <label className="nc-label">台词轨 ({(edited.dialogues ?? []).length})</label>
+              <div style={{ display: "grid", gap: 8 }}>
+                {(edited.dialogues ?? []).map((dialogue, index) => (
+                  <div key={dialogue.id} style={{ display: "grid", gap: 6, padding: 8, border: "1px solid var(--border-subtle, #e5e7eb)", borderRadius: 8 }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input className="nc-input" placeholder="说话人" value={dialogue.speaker} onChange={(e) => patchDialogue(index, { speaker: e.target.value })} />
+                      <select className="nc-select" style={{ maxWidth: 130 }} value={dialogue.voice} onChange={(e) => {
+                        const voice = e.target.value as DialogueIR["voice"];
+                        patchDialogue(index, { voice, presetId: voice === "inner" ? "inner" : voice === "flashback" ? "flashback" : dialogue.presetId });
+                      }}>
+                        {Object.entries(VOICE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      </select>
+                      <select className="nc-select" style={{ maxWidth: 110 }} value={dialogue.presetId ?? "clean"} onChange={(e) => patchDialogue(index, { presetId: e.target.value as DialogueIR["presetId"] })}>
+                        <option value="clean">干声</option>
+                        <option value="phone">电话</option>
+                        <option value="inner">独白</option>
+                        <option value="flashback">回忆</option>
+                        <option value="loudspeaker">广播</option>
+                      </select>
+                      <button className="nc-btn nc-btn-ghost" onClick={() => updateDialogues((edited.dialogues ?? []).filter((_, i) => i !== index))}>✕</button>
+                    </div>
+                    <textarea className="nc-textarea" style={{ minHeight: 52 }} placeholder="完整台词" value={dialogue.text} onChange={(e) => patchDialogue(index, { text: e.target.value })} />
+                  </div>
+                ))}
+                <button className="nc-btn nc-btn-ghost" style={{ alignSelf: "flex-start" }} onClick={() => updateDialogues([...(edited.dialogues ?? []), {
+                  id: `dialogue_${Date.now().toString(36)}`,
+                  speaker: edited.characters[0] ?? "",
+                  text: "",
+                  voice: "on_screen",
+                  presetId: "clean",
+                }])}>+ 添加台词</button>
+              </div>
+            </div>
+
+            <div className="nc-form-row">
+              <label className="nc-label">声音意图 ({(edited.audioNotes ?? []).length})</label>
+              <div style={{ display: "grid", gap: 8 }}>
+                {(edited.audioNotes ?? []).map((note, index) => (
+                  <div key={`${note.kind}-${index}`} style={{ display: "flex", gap: 6 }}>
+                    <select className="nc-select" style={{ maxWidth: 110 }} value={note.kind} onChange={(e) => {
+                      const kind = e.target.value as AudioNote["kind"];
+                      updateAudioNote(index, kind === "music" ? { kind, mood: "" } : kind === "ambience" ? { kind, desc: "" } : { kind, desc: "" });
+                    }}>
+                      <option value="sfx">音效</option>
+                      <option value="ambience">环境音</option>
+                      <option value="music">音乐</option>
+                    </select>
+                    {note.kind === "music" ? (
+                      <input className="nc-input" placeholder="音乐情绪" value={note.mood} onChange={(e) => updateAudioNote(index, { kind: "music", mood: e.target.value })} />
+                    ) : (
+                      <>
+                        <input className="nc-input" placeholder="声音描述" value={note.desc} onChange={(e) => updateAudioNote(index, note.kind === "sfx" ? { ...note, desc: e.target.value } : { kind: "ambience", desc: e.target.value })} />
+                        {note.kind === "sfx" && (
+                          <input className="nc-input" type="number" step="0.1" min={0} placeholder="at 秒" style={{ maxWidth: 90 }} value={note.at ?? ""} onChange={(e) => updateAudioNote(index, { kind: "sfx", desc: note.desc, at: e.target.value === "" ? undefined : parseFloat(e.target.value) })} />
+                        )}
+                      </>
+                    )}
+                    <button className="nc-btn nc-btn-ghost" onClick={() => update({ audioNotes: (edited.audioNotes ?? []).filter((_, i) => i !== index) })}>✕</button>
+                  </div>
+                ))}
+                <button className="nc-btn nc-btn-ghost" style={{ alignSelf: "flex-start" }} onClick={() => update({ audioNotes: [...(edited.audioNotes ?? []), { kind: "sfx", desc: "" }] })}>+ 添加声音</button>
               </div>
             </div>
 
             <div className="nc-form-grid">
               <div className="nc-form-row">
-                <label className="nc-label">屏幕字幕 (可选)</label>
+                <label className="nc-label">屏幕字卡 (不是台词字幕)</label>
                 <input className="nc-input" value={edited.onScreenText ?? ""} onChange={(e) => update({ onScreenText: e.target.value || undefined })} />
               </div>
-              <div className="nc-form-row">
-                <label className="nc-label">音效线索 (可选)</label>
-                <input className="nc-input" value={edited.audioCue ?? ""} onChange={(e) => update({ audioCue: e.target.value || undefined })} />
+              {(edited.riskFlags?.length ?? 0) > 0 && (
+                <div className="nc-form-row">
+                  <label className="nc-label">连续性风险</label>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {edited.riskFlags!.map(flag => <span key={flag} className="nc-pill" style={{ color: "#b45309" }}>⚠ {RISK_LABELS[flag] ?? flag}</span>)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="nc-form-row">
+              <label className="nc-label">素材轨预览 · 相对时码 ({previewClips.length})</label>
+              <div style={{ display: "grid", gap: 4, fontSize: 11 }}>
+                {previewClips.map(clip => {
+                  const summary = clip.kind === "voice"
+                    ? `${clip.payload.speaker || "旁白"}：${clip.payload.text}`
+                    : clip.kind === "music" ? clip.payload.mood
+                    : clip.kind === "sfx" || clip.kind === "ambience" ? clip.payload.desc : "视频素材";
+                  return (
+                    <div key={clip.id} style={{ display: "flex", gap: 8, justifyContent: "space-between", padding: "4px 6px", background: "var(--bg-subtle, #f8fafc)", borderRadius: 4 }}>
+                      <span>{clip.kind === "voice" ? "🎙" : clip.kind === "sfx" ? "💥" : clip.kind === "ambience" ? "🌧" : "🎵"} {summary}</span>
+                      <span style={{ whiteSpace: "nowrap", color: "var(--text-muted)" }}>{clip.tIn.toFixed(1)}–{clip.tOut.toFixed(1)}s{clip.estimated ? " · 估算" : ""}</span>
+                    </div>
+                  );
+                })}
+                {previewClips.length === 0 && <span style={{ color: "var(--text-muted)" }}>暂无声音素材</span>}
               </div>
             </div>
 
@@ -760,6 +895,16 @@ function ShotDrawer({
                 style={{ minHeight: 100, fontFamily: "ui-monospace, monospace", fontSize: 12 }}
                 value={edited.imagePrompt ?? ""}
                 onChange={(e) => update({ imagePrompt: e.target.value })}
+              />
+            </div>
+
+            <div className="nc-form-row">
+              <label className="nc-label">视频 prompt (只写运动/运镜,不重复外貌)</label>
+              <textarea
+                className="nc-textarea"
+                style={{ minHeight: 70, fontFamily: "ui-monospace, monospace", fontSize: 12 }}
+                value={edited.videoPrompt ?? ""}
+                onChange={(e) => update({ videoPrompt: e.target.value || undefined })}
               />
             </div>
 

@@ -1,0 +1,235 @@
+{
+  "version": 1,
+  "projectId": "project_demo",
+  "episodeId": "episode_01",
+  "duration": 9.345,
+  "shots": [
+    {
+      "shotId": "shot_legacy",
+      "startSec": 0,
+      "endSec": 4,
+      "duration": 4,
+      "clipIds": [
+        "shot_legacy:voice:dialogue_1",
+        "shot_legacy:music:1",
+        "shot_legacy:sfx:2"
+      ]
+    },
+    {
+      "shotId": "shot_modern",
+      "startSec": 4,
+      "endSec": 9,
+      "duration": 5,
+      "clipIds": [
+        "shot_modern:voice:dialogue_1",
+        "shot_modern:voice:dialogue_2",
+        "shot_modern:voice:dialogue_3",
+        "shot_modern:ambience:1",
+        "shot_modern:sfx:2",
+        "shot_modern:music:3"
+      ]
+    }
+  ],
+  "clips": [
+    {
+      "shotId": "shot_legacy",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": true,
+      "id": "shot_legacy:music:1",
+      "kind": "music",
+      "tIn": 0,
+      "tOut": 4,
+      "payload": {
+        "mood": "紧张弦乐"
+      },
+      "absIn": 0,
+      "absOut": 4,
+      "trackId": "music_1"
+    },
+    {
+      "shotId": "shot_legacy",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": true,
+      "id": "shot_legacy:sfx:2",
+      "kind": "sfx",
+      "tIn": 0,
+      "tOut": 1,
+      "payload": {
+        "desc": "杯盏轻碰"
+      },
+      "absIn": 0,
+      "absOut": 1,
+      "trackId": "sfx_1"
+    },
+    {
+      "id": "shot_legacy:voice:dialogue_1",
+      "shotId": "shot_legacy",
+      "kind": "voice",
+      "tIn": 0,
+      "tOut": 1.411,
+      "payload": {
+        "speaker": "苏晚",
+        "text": "原来是你。",
+        "voice": "on_screen"
+      },
+      "presetId": "clean",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": true,
+      "absIn": 0,
+      "absOut": 1.411,
+      "trackId": "voice_1"
+    },
+    {
+      "shotId": "shot_modern",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": true,
+      "id": "shot_modern:ambience:1",
+      "kind": "ambience",
+      "tIn": 0,
+      "tOut": 5,
+      "payload": {
+        "desc": "晚宴低声交谈与杯盏声"
+      },
+      "absIn": 4,
+      "absOut": 9,
+      "trackId": "ambience_1"
+    },
+    {
+      "shotId": "shot_modern",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": true,
+      "id": "shot_modern:music:3",
+      "kind": "music",
+      "tIn": 0,
+      "tOut": 5,
+      "payload": {
+        "mood": "压抑弦乐渐强"
+      },
+      "absIn": 4,
+      "absOut": 9,
+      "trackId": "music_1"
+    },
+    {
+      "id": "shot_modern:voice:dialogue_1",
+      "shotId": "shot_modern",
+      "kind": "voice",
+      "tIn": 0,
+      "tOut": 1.856,
+      "payload": {
+        "speaker": "苏晚",
+        "text": "你一直在骗我。",
+        "voice": "on_screen",
+        "emotion": "颤抖"
+      },
+      "presetId": "clean",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": true,
+      "absIn": 4,
+      "absOut": 5.856,
+      "trackId": "voice_1"
+    },
+    {
+      "shotId": "shot_modern",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": false,
+      "id": "shot_modern:sfx:2",
+      "kind": "sfx",
+      "tIn": 1.5,
+      "tOut": 2.5,
+      "payload": {
+        "desc": "一声轻微杯盏碰撞"
+      },
+      "absIn": 5.5,
+      "absOut": 6.5,
+      "trackId": "sfx_1"
+    },
+    {
+      "id": "shot_modern:voice:dialogue_2",
+      "shotId": "shot_modern",
+      "kind": "voice",
+      "tIn": 1.856,
+      "tOut": 3.934,
+      "payload": {
+        "speaker": "苏晚",
+        "text": "原来你早就知道。",
+        "voice": "inner"
+      },
+      "presetId": "inner",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": true,
+      "absIn": 5.856,
+      "absOut": 7.934,
+      "trackId": "voice_1"
+    },
+    {
+      "id": "shot_modern:voice:dialogue_3",
+      "shotId": "shot_modern",
+      "kind": "voice",
+      "tIn": 3.934,
+      "tOut": 5.345,
+      "payload": {
+        "speaker": "弗拉基米尔",
+        "text": "听我解释。",
+        "voice": "off_screen"
+      },
+      "presetId": "phone",
+      "status": "idle",
+      "attempts": 0,
+      "estimated": true,
+      "absIn": 7.934,
+      "absOut": 9.345,
+      "trackId": "voice_1"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "music_1",
+      "kind": "music",
+      "clipIds": [
+        "shot_legacy:music:1",
+        "shot_modern:music:3"
+      ]
+    },
+    {
+      "id": "sfx_1",
+      "kind": "sfx",
+      "clipIds": [
+        "shot_legacy:sfx:2",
+        "shot_modern:sfx:2"
+      ]
+    },
+    {
+      "id": "voice_1",
+      "kind": "voice",
+      "clipIds": [
+        "shot_legacy:voice:dialogue_1",
+        "shot_modern:voice:dialogue_1",
+        "shot_modern:voice:dialogue_2",
+        "shot_modern:voice:dialogue_3"
+      ]
+    },
+    {
+      "id": "ambience_1",
+      "kind": "ambience",
+      "clipIds": [
+        "shot_modern:ambience:1"
+      ]
+    }
+  ],
+  "transitions": [],
+  "layers": [
+    "video",
+    "cg",
+    "on_screen_text",
+    "subtitle",
+    "ai_disclosure"
+  ]
+}

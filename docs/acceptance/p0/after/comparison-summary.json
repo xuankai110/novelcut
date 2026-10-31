@@ -1,0 +1,23 @@
+{
+  "before": {
+    "dialogueFields": 1,
+    "audioFields": 1,
+    "separateVoiceClips": 0,
+    "separateAudioClips": 0,
+    "absoluteTimeline": false,
+    "riskFlags": 0
+  },
+  "after": {
+    "dialogueFields": 1,
+    "audioIntents": 2,
+    "separateVoiceClips": 4,
+    "separateAudioClips": 5,
+    "absoluteTimeline": true,
+    "riskFlags": 0,
+    "maxDialoguesPerShot": 3,
+    "distinctVoiceModes": 3,
+    "distinctAudioKinds": 3,
+    "renderTracks": 4,
+    "durationSec": 9.345
+  }
+}

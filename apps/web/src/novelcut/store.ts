@@ -1,5 +1,6 @@
 /** NovelCut local persistence — localStorage only for MVP. */
 import type { Asset, Chapter, Episode, EpisodeScript, Project, Shot, StorySkeleton, TaskRow } from "./types";
+import { migrateShot } from "./agent/shotIR";
 
 const NS = "novelcut:v1";
 const k = (suffix: string) => `${NS}:${suffix}`;
@@ -12,7 +13,15 @@ function readJson<T>(key: string, fallback: T): T {
 }
 function writeJson<T>(key: string, value: T) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    const name = (error as { name?: string })?.name;
+    if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") {
+      throw new Error("本地存储空间不足，项目尚未保存。请先导出项目备份，再清理不再使用的项目；不要把音视频 base64 写入项目数据。");
+    }
+    throw new Error(`项目保存失败：${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 export function genId(prefix = "id"): string {
@@ -98,10 +107,10 @@ export function deleteScript(projectId: string, episodeId: string): void {
 
 // ----- Shots -----
 export function listShots(projectId: string): Shot[] {
-  return readJson<Shot[]>(k(`shots:${projectId}`), []);
+  return readJson<Shot[]>(k(`shots:${projectId}`), []).map(migrateShot);
 }
 export function setShots(projectId: string, shots: Shot[]): void {
-  writeJson(k(`shots:${projectId}`), shots);
+  writeJson(k(`shots:${projectId}`), shots.map(migrateShot));
 }
 export function listShotsByEpisode(projectId: string, episodeId: string): Shot[] {
   return listShots(projectId).filter(s => s.episodeId === episodeId)

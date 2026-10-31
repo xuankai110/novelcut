@@ -1,0 +1,90 @@
+{
+  "id": "shot_modern",
+  "projectId": "project_demo",
+  "episodeId": "episode_01",
+  "episodeIndex": 1,
+  "sceneIndex": "1-1",
+  "sceneLocation": "晚宴厅",
+  "sceneTimeOfDay": "夜/内",
+  "shotIndex": 2,
+  "framing": "OTS",
+  "cameraMove": "dolly_in",
+  "duration": 5,
+  "cameraAngle": "eye",
+  "narrativePov": "objective",
+  "characters": [
+    "苏晚",
+    "弗拉基米尔"
+  ],
+  "action": "苏晚后退半步，握紧酒杯。",
+  "emotion": "压抑震惊",
+  "blocking": {
+    "count": 2,
+    "positions": "苏晚左前，弗拉基米尔右后",
+    "facing": "正反打"
+  },
+  "depth": {
+    "foreground": "弗拉基米尔肩部",
+    "midground": "苏晚面部",
+    "background": "晚宴人群",
+    "focus": "苏晚眼睛"
+  },
+  "dialogues": [
+    {
+      "id": "dialogue_1",
+      "speaker": "苏晚",
+      "text": "你一直在骗我。",
+      "voice": "on_screen",
+      "emotion": "颤抖",
+      "presetId": "clean"
+    },
+    {
+      "id": "dialogue_2",
+      "speaker": "苏晚",
+      "text": "原来你早就知道。",
+      "voice": "inner",
+      "presetId": "inner"
+    },
+    {
+      "id": "dialogue_3",
+      "speaker": "弗拉基米尔",
+      "text": "听我解释。",
+      "voice": "off_screen",
+      "presetId": "phone"
+    }
+  ],
+  "dialogue": {
+    "character": "苏晚",
+    "line": "你一直在骗我。"
+  },
+  "audioNotes": [
+    {
+      "kind": "ambience",
+      "desc": "晚宴低声交谈与杯盏声"
+    },
+    {
+      "kind": "sfx",
+      "desc": "一声轻微杯盏碰撞",
+      "at": 1.5
+    },
+    {
+      "kind": "music",
+      "mood": "压抑弦乐渐强"
+    }
+  ],
+  "audioCue": "AMB: 晚宴低声交谈与杯盏声；SFX: 一声轻微杯盏碰撞；BGM: 压抑弦乐渐强",
+  "riskFlags": [
+    "long_dialogue"
+  ],
+  "imagePrompt": "Over-the-shoulder shot, Su Wan in focus, restrained shock, warm banquet light.",
+  "videoPrompt": "Su Wan steps back half a pace and tightens her grip; camera slowly pushes in.",
+  "associatedAssetIds": [],
+  "imageStatus": "idle",
+  "videoStatus": "idle",
+  "attempts": {
+    "image": 0,
+    "video": 0
+  },
+  "createdAt": 1700000000000,
+  "updatedAt": 1700000000000
+}

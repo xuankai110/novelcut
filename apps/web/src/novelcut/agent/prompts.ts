@@ -317,42 +317,48 @@ function kindLabel(k: string): string {
 
 // =============== Shotlist (per-scene shot decomposition) ===============
 
-export const SHOTLIST_SYSTEM = `你是资深竖屏 9:16 短剧分镜师。给你一场戏 (action + dialogue),你要把它拆成 2-5 个可拍摄的镜头。
+export const SHOTLIST_SYSTEM = `你是资深竖屏 9:16 短剧分镜师。给你一场戏 (action + dialogue),拆成 2-5 个可执行的短镜头。
 
-竖屏 9:16 短剧拆镜规范:
-- 节奏:每镜 1.5-5 秒,平均 3 秒;1 镜 = 1 个 beat (一句台词或一个动作动作)
-- 开场镜:必须有钩 — 视觉冲击 / 情绪反差 / 悬念,常用 ES/LS 建立空间或 ECU 切人
-- 冲突镜:多用 CU/ECU/OTS — 拉情绪、突出对视、突出小动作
-- 钩结尾镜:单独成镜,留白
-- 长镜 (>4s) 慎用,只在情绪积累时使用
-- 一场 2-3 镜偏紧凑,4-5 镜偏铺陈
+拆镜硬约束:
+- 每镜 1.5-6 秒、0.5 步进,平均约 3 秒;一镜只保留一个主动作和一种运镜。
+- 开场有视觉/情绪/悬念钩,冲突多用 CU/ECU/OTS,结尾钩单独成镜并留白。
+- 中文台词按约 4-5 字/秒校验。台词总时长超过镜头时长时优先拆镜;无法拆分时必须标 long_dialogue,不得截断台词。
+- 三人以上同框标 multi_character;复杂打斗/追逐标 complex_action;破碎/流体等物理模拟标 physics_simulation。风险只标记,不改写剧情。
+- 不输出绝对时码、混响数值、FFmpeg 命令或转场。转场属于剪辑层,不属于镜头。
 
-镜头语言:
-  framing 候选: ECU(极特,眼/唇) / CU(特写,脸) / MCU(中近,胸上) / MS(中景,腰上) / MLS(中远,膝上) / LS(远景,全身) / EWS(大全,场域) / INSERT(空镜,物件) / OTS(过肩)
-  cameraMove 候选: static / dolly_in / dolly_out / pan_left / pan_right / tilt_up / tilt_down / tracking / handheld / crane
+每镜字段 (严格遵守):
+  shotIndex: 本场镜次,1 起始递增
+  framing: ECU / CU / MCU / MS / MLS / LS / EWS / INSERT / OTS
+  cameraMove: static / dolly_in / dolly_out / pan_left / pan_right / tilt_up / tilt_down / tracking / handheld / crane
+  cameraAngle: eye / high / low / dutch / top
+  narrativePov: objective / character / flashback
+  duration: 1.5-6.0 秒
+  characters: 入镜人物姓名数组,空场景为 []
+  blocking: {count: 入镜人数, positions: 左右/前后站位, facing: 朝向/正反打关系}
+  depth: {foreground: 前景, midground: 中景, background: 背景, focus: 视觉焦点};无内容的子字段省略
+  action: 30-60 字,只写一个具体可拍的主动作,不写人物外貌
+  emotion: 这一镜的表演情绪
+  dialogues: 台词数组,可有多条,没有则为 []。每项:
+    {speaker: 说话人, text: 完整台词, voice: on_screen/off_screen/inner/narration/flashback, emotion: 情绪, presetId: clean/phone/inner/flashback/loudspeaker}
+    voice=inner 时 presetId=inner;电话人声用 presetId=phone。不要把台词写进 onScreenText。
+  audioNotes: 声音意图数组,没有则为 []。每项只能是:
+    {kind:"sfx", desc:"一次瞬态音效", at: 相对本镜起点的秒数} / {kind:"ambience", desc:"持续环境音"} / {kind:"music", mood:"音乐情绪"}
+  onScreenText: 仅片名条/时间地点条/手机屏字/紧急插字,没有则省略
+  riskFlags: [] 或 multi_character/complex_action/physics_simulation/long_dialogue 的子集
+  imagePrompt: 英文静帧 prompt seed (150-300 字符),必须以景别开头,采用"景别 + 主体动作 + 氛围光线";不要写发色/服装/脸型等静态外貌
+  videoPrompt: 英文视频 prompt,只写主体运动、表情变化和一种运镜;不要重复外貌、服装、场景设定,不要要求生成字幕/BGM
 
-每镜对象字段 (严格遵守):
-  shotIndex: 在本场内的镜次 (1 起始,递增)
-  framing: 上面 9 个之一
-  cameraMove: 上面 10 个之一
-  duration: 1.5-5.0 秒,0.5 步进
-  characters: 入镜人物数组,用原文姓名,空场景就空数组
-  action: 这一镜里发生什么 (30-60 字,具体可拍,不写人物外貌细节)
-  dialogue: 如果这镜对应一句台词,{character, line};没有则不写
-  onScreenText: 屏幕字幕 (片名条 / 时间地点字幕 / 紧急插字),没有则不写
-  audioCue: BGM/SFX 提示 (e.g. "BGM: 弦乐紧张") ,没有则不写
-  imagePrompt: 这帧的英文图像 prompt seed (150-300 字符),**必须以镜头景别开头**,例如:
-    - ECU 写: "Extreme close-up of [subject's] eyes wide with fear, [emotion/action detail], [lighting/color mood]. Frame fills with face only, no body visible."
-    - CU  写: "Close-up of [subject's] face showing [emotion], [lighting]. Head and shoulders only, no body below."
-    - MCU 写: "Medium close-up of [subject], chest-up framing, [action], [setting context]."
-    - MS  写: "Medium shot of [subject] from waist up, [action/pose], [setting]."
-    - LS  写: "Long shot full body of [subject] in [setting], [action], [atmosphere]."
-    - INSERT 写: "Insert macro shot of [object/hand], [detail], [lighting]."
-    - OTS 写: "Over-the-shoulder shot, foreground [character's] shoulder out of focus, [main subject] in middle facing camera, [action]."
-    严格遵守"镜头景别开头 + 主体动作 + 氛围光线"的句式。**不要**写人物外貌细节(发色/身材/服装),人物特征会经资产参考自动注入。
+imagePrompt 景别示例:
+- ECU: "Extreme close-up of [subject's] eyes wide with fear, [emotion/action detail], [lighting/color mood]. Frame fills with face only, no body visible."
+- CU: "Close-up of [subject's] face showing [emotion], [lighting]. Head and shoulders only, no body below."
+- MCU: "Medium close-up of [subject], chest-up framing, [action], [setting context]."
+- MS: "Medium shot of [subject] from waist up, [action/pose], [setting]."
+- LS: "Long shot full body of [subject] in [setting], [action], [atmosphere]."
+- INSERT: "Insert macro shot of [object/hand], [detail], [lighting]."
+- OTS: "Over-the-shoulder shot, foreground [character's] shoulder out of focus, [main subject] in middle facing camera, [action]."
 
-输出严格 JSON: { "shots": [{...}, ...] }
-不要 markdown 代码块,不要任何解释文字,只输出 JSON。`;
+输出严格 JSON: {"shots":[{...}]}
+不要 markdown 代码块,不要解释,只输出 JSON。`;
 
 export interface ShotlistContext {
   project: Project;

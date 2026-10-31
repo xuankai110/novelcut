@@ -15,7 +15,11 @@ import {
   SHOTLIST_SYSTEM, buildShotlistUser, buildShotImageGenPrompt,
   type ShotlistContext,
 } from "./prompts";
-import type { Shot, ShotFraming, ShotCameraMove } from "../types";
+import type { Shot, ShotIR } from "../types";
+import { normalizeShotIR, type RawShot, type ShotNormalizationBase } from "./shotIR";
+
+export type { RawShot } from "./shotIR";
+export { compileShot, compileEpisode } from "../production/compiler";
 
 export interface RunSkeletonResult { skeleton: StorySkeleton; raw: string; }
 
@@ -217,22 +221,6 @@ export async function runAssetImage(
 
 export interface RunShotlistOptions { signal?: AbortSignal; }
 
-const VALID_FRAMING: ShotFraming[] = ["ECU","CU","MCU","MS","MLS","LS","EWS","INSERT","OTS"];
-const VALID_MOVE: ShotCameraMove[] = ["static","dolly_in","dolly_out","pan_left","pan_right","tilt_up","tilt_down","tracking","handheld","crane"];
-
-export interface RawShot {
-  shotIndex?: number;
-  framing?: string;
-  cameraMove?: string;
-  duration?: number;
-  characters?: string[];
-  action?: string;
-  dialogue?: { character?: string; line?: string };
-  onScreenText?: string;
-  audioCue?: string;
-  imagePrompt?: string;
-}
-
 export async function runShotlist(
   llm: LLMConfig, ctx: ShotlistContext, opts: RunShotlistOptions = {},
 ): Promise<RawShot[]> {
@@ -251,38 +239,8 @@ export async function runShotlist(
   }));
 }
 
-export function normalizeShot(raw: RawShot, base: {
-  projectId: string; episodeId: string; episodeIndex: number;
-  sceneIndex: string; sceneLocation: string; sceneTimeOfDay: string;
-}): Omit<Shot, "id"> {
-  const framing = (VALID_FRAMING as string[]).includes(String(raw.framing))
-    ? raw.framing as ShotFraming : "MS";
-  const cameraMove = (VALID_MOVE as string[]).includes(String(raw.cameraMove))
-    ? raw.cameraMove as ShotCameraMove : "static";
-  const dRaw = Number(raw.duration);
-  const duration = Number.isFinite(dRaw) ? Math.max(1.5, Math.min(5.0, Math.round(dRaw * 2) / 2)) : 3.0;
-  return {
-    projectId: base.projectId,
-    episodeId: base.episodeId,
-    episodeIndex: base.episodeIndex,
-    sceneIndex: base.sceneIndex,
-    sceneLocation: base.sceneLocation,
-    sceneTimeOfDay: base.sceneTimeOfDay,
-    shotIndex: Number.isFinite(raw.shotIndex) ? Number(raw.shotIndex) : 1,
-    framing, cameraMove, duration,
-    characters: Array.isArray(raw.characters) ? raw.characters.map(String) : [],
-    action: String(raw.action ?? ""),
-    dialogue: raw.dialogue?.character || raw.dialogue?.line
-      ? { character: String(raw.dialogue?.character ?? ""), line: String(raw.dialogue?.line ?? "") }
-      : undefined,
-    onScreenText: raw.onScreenText ? String(raw.onScreenText) : undefined,
-    audioCue: raw.audioCue ? String(raw.audioCue) : undefined,
-    imagePrompt: raw.imagePrompt ? String(raw.imagePrompt) : undefined,
-    associatedAssetIds: [],
-    imageStatus: "idle",
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
+export function normalizeShot(raw: RawShot, base: ShotNormalizationBase): Omit<ShotIR, "id"> {
+  return normalizeShotIR(raw, base);
 }
 
 /** Auto-link assets: characters by name, scene by location. */
@@ -308,7 +266,6 @@ export async function runShotImage(
   characterAssets: Asset[], sceneAsset: Asset | undefined,
   opts: RunShotImageOptions = {},
 ): Promise<{ url?: string; b64?: string }> {
-  const { getVideoRatio, getImageQuality, ratioToPixelSize } = await import("../projectMeta");
   const ratio = getVideoRatio(project);  // shots use project ratio (9:16 for short drama)
   const quality = getImageQuality(project);
 

@@ -1,0 +1,55 @@
+{
+  "id": "shot_legacy",
+  "projectId": "project_demo",
+  "episodeId": "episode_01",
+  "episodeIndex": 1,
+  "sceneIndex": "1-1",
+  "sceneLocation": "晚宴厅",
+  "sceneTimeOfDay": "夜/内",
+  "shotIndex": 1,
+  "framing": "CU",
+  "cameraMove": "static",
+  "duration": 4,
+  "cameraAngle": "eye",
+  "narrativePov": "objective",
+  "characters": [
+    "苏晚"
+  ],
+  "action": "苏晚抬眼看向画外，手指收紧。",
+  "dialogues": [
+    {
+      "id": "dialogue_1",
+      "speaker": "苏晚",
+      "text": "原来是你。",
+      "voice": "on_screen",
+      "presetId": "clean"
+    }
+  ],
+  "dialogue": {
+    "character": "苏晚",
+    "line": "原来是你。"
+  },
+  "onScreenText": "莫斯科 · 顶级晚宴",
+  "audioNotes": [
+    {
+      "kind": "music",
+      "mood": "紧张弦乐"
+    },
+    {
+      "kind": "sfx",
+      "desc": "杯盏轻碰"
+    }
+  ],
+  "audioCue": "BGM: 紧张弦乐；SFX: 杯盏轻碰",
+  "riskFlags": [],
+  "imagePrompt": "Close-up of Su Wan, restrained shock, warm banquet light.",
+  "associatedAssetIds": [],
+  "imageStatus": "idle",
+  "videoStatus": "idle",
+  "attempts": {
+    "image": 0,
+    "video": 0
+  },
+  "createdAt": 1700000000000,
+  "updatedAt": 1700000000000
+}

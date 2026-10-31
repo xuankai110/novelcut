@@ -77,11 +77,22 @@ export interface Episode {
 
 export type AssetKind = "char" | "prop" | "scene" | "media";
 
+export interface VoiceProfile {
+  provider?: string;
+  voiceId?: string;
+  referenceAudioUrl?: string;
+  speed?: number;
+  style?: string;
+  approvedSampleUrl?: string;
+}
+
 export interface Asset {
   id: string;
   projectId: string;
   kind: AssetKind;
   name: string;
+  /** Character voice bible; used when compiling dialogue into voice clips. */
+  voiceProfile?: VoiceProfile;
   /** for characters: kept role from skeleton (女主/男主/反派/...) */
   role?: string;
   /** for characters: arc; for scenes: ambiance description; for props: usage */
@@ -114,6 +125,48 @@ export type ShotCameraMove =
   | "pan_left" | "pan_right" | "tilt_up" | "tilt_down"
   | "tracking" | "handheld" | "crane";
 
+export type GenStatus = "idle" | "running" | "done" | "error";
+export type CameraAngle = "eye" | "high" | "low" | "dutch" | "top";
+export type NarrativePov = "objective" | "character" | "flashback";
+export type DialogueVoice = "on_screen" | "off_screen" | "inner" | "narration" | "flashback";
+export type VoicePresetId = "clean" | "phone" | "inner" | "flashback" | "loudspeaker";
+export type ShotRiskFlag = "multi_character" | "complex_action" | "physics_simulation" | "long_dialogue";
+
+export interface DialogueIR {
+  id: string;
+  speaker: string;
+  text: string;
+  voice: DialogueVoice;
+  emotion?: string;
+  presetId?: VoicePresetId;
+  /** Relative to the owning shot. Absolute time is derived by the render compiler. */
+  tIn?: number;
+  tOut?: number;
+}
+
+export type AudioNote =
+  | { kind: "sfx"; desc: string; at?: number }
+  | { kind: "ambience"; desc: string }
+  | { kind: "music"; mood: string };
+
+export interface ShotBlocking {
+  count: number;
+  positions?: string;
+  facing?: string;
+}
+
+export interface ShotDepth {
+  foreground?: string;
+  midground?: string;
+  background?: string;
+  focus?: string;
+}
+
+export interface ShotAttempts {
+  image: number;
+  video: number;
+}
+
 export interface Shot {
   id: string;
   projectId: string;
@@ -130,19 +183,37 @@ export interface Shot {
 
   framing: ShotFraming;
   cameraMove: ShotCameraMove;
-  duration: number;            // seconds, 1.5-5.0
+  duration: number;            // seconds, normalized to 1.5-6.0
+  cameraAngle?: CameraAngle;
+  narrativePov?: NarrativePov;
 
   characters: string[];
   action: string;
+  emotion?: string;
+  blocking?: ShotBlocking;
+  depth?: ShotDepth;
+  /** @deprecated v1 compatibility. New code reads/writes dialogues. */
   dialogue?: { character: string; line: string };
+  dialogues?: DialogueIR[];
+  /** Title/location cards only. Dialogue subtitles derive from voice clips. */
   onScreenText?: string;
+  /** @deprecated v1 compatibility. New code reads/writes audioNotes. */
   audioCue?: string;
+  audioNotes?: AudioNote[];
+  riskFlags?: ShotRiskFlag[];
 
   imagePrompt?: string;
+  /** Motion and camera only; static identity comes from associated assets. */
+  videoPrompt?: string;
   imageUrl?: string;           // generated still
-  imageStatus?: "idle" | "running" | "done" | "error";
+  imageStatus?: GenStatus;
   imageError?: string;
   imageGeneratedAt?: number;
+  videoUrl?: string;
+  videoStatus?: GenStatus;
+  videoError?: string;
+  videoGeneratedAt?: number;
+  attempts?: ShotAttempts;
 
   /** Auto-resolved asset ids (chars / scene / props) — used as conditioning later */
   associatedAssetIds: string[];
@@ -152,6 +223,14 @@ export interface Shot {
   createdAt: number;
   updatedAt: number;
 }
+
+/** Normalized v2 shot. Optional fields on Shot keep persisted v1 JSON type-compatible. */
+export type ShotIR = Omit<Shot, "dialogues" | "audioNotes" | "videoStatus" | "attempts"> & {
+  dialogues: DialogueIR[];
+  audioNotes: AudioNote[];
+  videoStatus: GenStatus;
+  attempts: ShotAttempts;
+};
 
 export interface TaskRow {
   id: string; projectId: string; kind: string; model?: string;
