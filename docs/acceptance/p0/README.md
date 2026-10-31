@@ -43,6 +43,14 @@ P0 通过验收。旧项目数据可无损读取并迁移；新分镜可以表�
 
 改造后仍保留旧字段，方便 v1 页面和导出逻辑渐进迁移；新代码只读写 `dialogues[]` / `audioNotes[]`。
 
+### 重新生成快照
+
+```bash
+pnpm --dir apps/web exec tsx docs/acceptance/p0/scripts/capture.ts
+```
+
+脚本会自动 `git worktree add` 到临时目录，取 `P0_BASELINE_REF`（默认 `51dc195`）的旧 `normalizeShot()` 生成 before 快照，再回当前分支生成 after 快照，跑完删除临时 worktree。改动前后两次运行的输出应逐字节一致，可作为“对比未被后续改动污染”的检查。
+
 ## 3. 自动化验收
 
 执行命令：
